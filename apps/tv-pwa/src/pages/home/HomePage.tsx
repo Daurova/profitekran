@@ -33,6 +33,12 @@ export const HomePage = () => {
         if (json.status === 'success') {
           // ТЕПЕРЬ СОХРАНЯЕМ ВЕСЬ ОБЪЕКТ, А НЕ ТОЛЬКО URL
           setVideos(json.data);
+          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+              type: 'CACHE_VIDEOS',
+              videos: json.data.map((item: any) => item.url),
+            });
+          }
           localStorage.setItem('cached_playlist', JSON.stringify(json.data));
         }
       } catch (err) {

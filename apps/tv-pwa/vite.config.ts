@@ -3,9 +3,11 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const isProd = process.env.NODE_ENV === 'production' || !fs.existsSync('./key.pem');
+
 export default defineConfig({
   server: {
-    https: {
+    https: isProd ? undefined : {
       key: fs.readFileSync('./key.pem'),
       cert: fs.readFileSync('./cert.pem'),
     },
@@ -18,7 +20,7 @@ export default defineConfig({
     },
   },
   preview: {
-    https: {
+    https: isProd ? undefined : {
       key: fs.readFileSync('./key.pem'),
       cert: fs.readFileSync('./cert.pem'),
     },
@@ -33,9 +35,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      strategies: 'injectManifest', // Ручной режим
-      srcDir: 'src',                 // Ищем в папке src
-      filename: 'sw.ts',             // Имя нашего файла
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
@@ -53,11 +55,7 @@ export default defineConfig({
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
           { src: 'maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
-        screenshots: [
-          { src: 'screenshot-wide.png', sizes: '1280x720', type: 'image/png', form_factor: 'wide', label: 'Главный экран TV App' },
-        ],
       },
-      // Вместо workbox теперь используется injectManifest
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
       },

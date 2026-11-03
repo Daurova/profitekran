@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: super_secret_password
+      POSTGRES_DB: tv_platform
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  api:
+    build: 
+      context: ./services/api
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql://admin:super_secret_password@postgres:5432/tv_platform?schema=public"
+      PORT: 4000
+    depends_on:
+      - postgres
+    volumes:
+      - ./apps/tv-pwa/dist/videos-light:/apps/tv-pwa/public/videos-light:ro
+    command: sh -c "npx prisma db push && npm run db:seed && npm start"
+    restart: always
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./apps/tv-pwa/dist:/usr/share/nginx/html
+      - ./apps/tv-pwa/dist/videos-light:/usr/share/nginx/html/videos-light:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+    depends_on:
+      - api
+    restart: always
+
+volumes:
+  postgres_data:
