@@ -18,18 +18,20 @@ jobs:
             cd /var/www/profitekran
             git pull origin main
             
-            # Пересобираем фронтенд
+            # 1. Пересобираем фронтенд
             cd apps/tv-pwa
             npm install
             npm run build
             
-            # Копируем видео (если их нет)
-            mkdir -p dist/videos-light
-            cp -r public/videos-light/* dist/videos-light/ 2>/dev/null || true
+            # 2. Возвращаем видео на место (они не должны теряться)
+            # Копируем их только если их нет, чтобы не перезаписывать новые
+            if [ ! -d "dist/videos-light" ]; then
+              mkdir -p dist/videos-light
+              cp -r public/videos-light/* dist/videos-light/ 2>/dev/null || true
+            fi
             
-            # Перезапускаем Docker
+            # 3. Перезапускаем Docker
             cd ../..
             docker compose -f docker-compose.prod.yml up -d --build
             chmod -R 755 apps/tv-pwa/dist/videos-light
             docker compose -f docker-compose.prod.yml restart nginx
-            
