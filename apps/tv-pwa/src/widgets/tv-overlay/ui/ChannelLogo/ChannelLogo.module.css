@@ -1,0 +1,29 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* Расстояние между иконкой и текстом */
+}
+
+.icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(255, 65, 108, 0.3); /* Легкое свечение под цвет иконки */
+}
+
+.text {
+  font-family: 'Raleway', sans-serif;
+  /* 2.5rem = 40px по умолчанию, но масштабируется */
+  font-size: 3.5rem; 
+  font-weight: 600;
+  color: white;
+  letter-spacing: 0.15em; /* Отступы в em зависят от размера шрифта */
+  text-transform: uppercase;
+  text-shadow: 0 0.1rem 0.2rem rgba(0, 0, 0, 0.6);
+  line-height: 1;
+  
+  /* Big Tech секрет: профессиональное сглаживание */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}

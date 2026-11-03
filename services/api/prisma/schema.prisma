@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Перечисление типов контента (как в нашем TypeScript)
+enum ContentType {
+  BASE
+  PROMO
+  COFFEE_ANCHOR
+  COFFEE_OFFER
+  SERVICES
+  MASTER
+  PRODUCT
+  PARTNER
+}
+
+model Content {
+  id              String      @id @default(uuid())
+  type            ContentType
+  url             String
+  durationSec     Int
+  hasAudio        Boolean     @default(false)
+  maxPerHour      Int?
+  cooldownMin     Int?
+  requiresConsent Boolean     @default(false)
+  dayparts        String[]    // <-- ДОБАВИЛИ ЭТУ СТРОКУ
+  createdAt       DateTime    @default(now())
+}
