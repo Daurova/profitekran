@@ -83,3 +83,6 @@ jobs:
             
             # Применяем политику CORS
             aws s3api put-bucket-cors --bucket profitekran-media --endpoint-url https://s3.regru.cloud --cors-configuration file://cors.json
+            
+            # 9. Делаем файлы публично доступными (Bucket Policy)
+            aws s3api put-bucket-policy --bucket profitekran-media --endpoint-url https://s3.regru.cloud --policy file://policy.json
