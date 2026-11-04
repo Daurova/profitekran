@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { GeneratePlaylistUseCase } from '../../application/use-cases/GeneratePlaylistUseCase.js';
 import { PrismaContentRepository } from '../repositories/PrismaContentRepository.js'; // <-- Новый импорт
 import { getVideoUrl, uploadVideo } from '../s3/S3Service.js';
+import { prisma } from '../database/prisma.js';
 
 export async function playlistRoutes(app: FastifyInstance) {
   // 1. Инициализируем зависимости (теперь это реальная база!)
@@ -38,6 +39,31 @@ export async function playlistRoutes(app: FastifyInstance) {
     } catch (error) {
       app.log.error(error);
       return reply.status(500).send({ error: 'Ошибка загрузки' });
+    }
+  });
+    // Временный эндпоинт для добавления видео в базу (замена админки)
+  app.post('/add-video', async (request, reply) => {
+    try {
+      const { key, type } = request.body as { key: string, type: string };
+      
+      if (!key || !type) {
+        return reply.status(400).send({ error: 'Нужны key и type' });
+      }
+
+      const content = await prisma.content.create({
+        data: {
+          type: type as any,
+          url: key,
+          durationSec: 15,
+          hasAudio: false,
+          dayparts: ['09-11', '11-14', '14-17', '17-20', '20-22'],
+        },
+      });
+
+      return { status: 'success', content };
+    } catch (error) {
+      app.log.error(error);
+      return reply.status(500).send({ error: 'Ошибка добавления видео' });
     }
   });
 }
