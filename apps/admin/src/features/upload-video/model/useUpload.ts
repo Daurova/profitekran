@@ -27,14 +27,15 @@ export const useUpload = (onSuccess: () => void) => {
     setProgress(30);
 
     try {
-      // 1. Загружаем файл в S3
+      // 1. Загружаем файл в S3 (сервер вернет durationSec)
       const uploadData = await uploadVideoToS3(params.file);
       setProgress(70);
 
-      // 2. Отправляем метаданные в базу
+      // 2. Отправляем метаданные в базу (включая durationSec)
       await addVideoToDb({
         key: uploadData.key,
         type: params.type,
+        durationSec: uploadData.durationSec, // <-- ДОБАВИЛИ
         maxPerHour: params.maxPerHour,
         cooldownMin: params.cooldownMin,
         requiresConsent: params.requiresConsent,

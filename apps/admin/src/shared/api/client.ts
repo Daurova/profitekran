@@ -22,7 +22,8 @@ export const fetchVideos = async () => {
 };
 
 // 2. Загрузить файл в S3 (через наш API)
-export const uploadVideoToS3 = async (file: File): Promise<{ key: string }> => {
+// ИСПРАВЛЕНО: Добавлен durationSec в возвращаемый тип
+export const uploadVideoToS3 = async (file: File): Promise<{ key: string; durationSec: number }> => {
   const formData = new FormData();
   formData.append('file', file);
 
@@ -39,6 +40,7 @@ export const uploadVideoToS3 = async (file: File): Promise<{ key: string }> => {
 export const addVideoToDb = async (data: {
   key: string;
   type: string;
+  durationSec: number;
   maxPerHour?: number;
   cooldownMin?: number;
   requiresConsent?: boolean;
@@ -46,7 +48,7 @@ export const addVideoToDb = async (data: {
   const res = await fetch(`${API_URL}/add-video`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data), // <-- Отправляем весь объект
+    body: JSON.stringify(data),
   });
 
   if (!res.ok) throw new Error('Ошибка добавления в базу');
