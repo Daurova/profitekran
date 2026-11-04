@@ -6,6 +6,7 @@ import {
   PROMO_TEMPLATES, 
   DAYPART_TEMPLATES 
 } from '../../domain/rules/BroadcastRules.js';
+import { getVideoUrl } from '../../infrastructure/s3/S3Service.js';
 
 export class GeneratePlaylistUseCase {
   constructor(
@@ -100,6 +101,10 @@ export class GeneratePlaylistUseCase {
       }
     }
 
-    return playlist;
+        // Превращаем ключи S3 в полные ссылки
+    return playlist.map(item => ({
+      ...item,
+      url: getVideoUrl(item.url),
+    }));
   }
 }
