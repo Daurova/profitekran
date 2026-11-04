@@ -62,11 +62,13 @@ jobs:
             docker compose -f docker-compose.prod.yml up -d --build
             chmod -R 755 apps/tv-pwa/dist/videos-light
             docker compose -f docker-compose.prod.yml restart nginx
-            # 6. Безопасный бейзлайнинг (только если база уже существует)
-            
-            # Проверяем, есть ли таблица Content, но нет истории миграций
+            # 6. Автоматический бейзлайнинг (Big Tech Way)
+            # Проверяем, какие миграции уже применены, и помечаем их
             docker compose -f docker-compose.prod.yml exec -T postgres psql -U admin -d tv_platform -c "SELECT 1 FROM information_schema.tables WHERE table_name = 'Content'" | grep -q 1 && \
             docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate resolve --applied 20261102135601_init || true
+            
+            docker compose -f docker-compose.prod.yml exec -T postgres psql -U admin -d tv_platform -c "SELECT 1 FROM information_schema.columns WHERE table_name = 'Content' AND column_name = 'dayparts'" | grep -q 1 && \
+            docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate resolve --applied 20261102183637_add_dayparts || true
             
             # 7. Применяем миграции
             docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
