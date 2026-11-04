@@ -1,16 +1,24 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+// Проверяем, что все переменные окружения заданы
+const endpoint = process.env['S3_ENDPOINT'];
+const region = process.env['S3_REGION'];
+const accessKeyId = process.env['S3_ACCESS_KEY'];
+const secretAccessKey = process.env['S3_SECRET_KEY'];
+const BUCKET = process.env['S3_BUCKET'];
+
+if (!endpoint || !region || !accessKeyId || !secretAccessKey || !BUCKET) {
+  throw new Error('Не заданы переменные окружения для S3');
+}
 
 const s3Client = new S3Client({
-  endpoint: process.env['S3_ENDPOINT'],
-  region: process.env['S3_REGION'],
+  endpoint,
+  region,
   credentials: {
-    accessKeyId: process.env['S3_ACCESS_KEY']!,
-    secretAccessKey: process.env['S3_SECRET_KEY']!,
+    accessKeyId,
+    secretAccessKey,
   },
   forcePathStyle: true,
 });
-
-const BUCKET = process.env['S3_BUCKET'];
 
 // Загрузка видео в S3
 export const uploadVideo = async (fileBuffer: Buffer, fileName: string): Promise<string> => {
