@@ -17,8 +17,11 @@ export function buildApp(): FastifyInstance {
   app.get('/health', async () => {
     return { status: 'ok', timestamp: new Date().toISOString() };
   });
-  app.register(multipart); 
-  
+  app.register(multipart, {
+    limits: {
+      fileSize: 100 * 1024 * 1024, // 100 МБ (можно поставить больше, если нужно)
+    },
+  });  
   app.register(playlistRoutes);
   return app;
 }
