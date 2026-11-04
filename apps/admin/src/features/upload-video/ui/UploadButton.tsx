@@ -1,27 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Stack, Progress, Alert, FileInput, Select, NumberInput, Switch, Card, Title, Button, SegmentedControl } from '@mantine/core';
 import { IconAlertCircle, IconUpload } from '@tabler/icons-react';
 import { useUpload } from '../model/useUpload';
 
 export const UploadButton = ({ onSuccess }: { onSuccess: () => void }) => {
+  // Официальный способ сброса FileInput в Mantine
+  const resetRef = useRef<() => void>(null);
+
   const [file, setFile] = useState<File | null>(null);
-  
-  // Универсальные типы, понятные любому бизнесу
   const [contentMode, setContentMode] = useState<'base' | 'promo'>('base'); 
   const [promoSubtype, setPromoSubtype] = useState<string>('promo_standard');
-  
   const [maxPerHour, setMaxPerHour] = useState<number | string>('');
   const [cooldownMin, setCooldownMin] = useState<number | string>('');
   const [requiresConsent, setRequiresConsent] = useState(false);
 
-  const { upload, isUploading, progress, error } = useUpload(onSuccess);
+  const { upload, isUploading, progress, error } = useUpload(() => {
+    // 1. Вызываем официальный сброс Mantine (очищает нативный input)
+    resetRef.current?.();
+    // 2. Сбрасываем React-состояние
+    setFile(null);
+    setMaxPerHour('');
+    setCooldownMin('');
+    setRequiresConsent(false);
+    onSuccess();
+  });
 
   const handleUpload = () => {
     if (!file) return;
 
-    // Маппинг универсальных типов в наши технические типы БД
     let finalType = 'BASE';
     if (contentMode === 'promo') {
       finalType = promoSubtype === 'anchor' ? 'COFFEE_ANCHOR' : 'PROMO';
@@ -42,6 +50,7 @@ export const UploadButton = ({ onSuccess }: { onSuccess: () => void }) => {
         <Title order={3}>Загрузка нового видео</Title>
 
         <FileInput
+          resetRef={resetRef} // <-- ВОТ ЭТО ДЕЛАЕТ ВСЮ МАГИЮ
           label="Видеофайл"
           placeholder="Нажмите, чтобы выбрать"
           accept="video/*"
@@ -50,7 +59,7 @@ export const UploadButton = ({ onSuccess }: { onSuccess: () => void }) => {
           onChange={setFile}
           size="lg"
           disabled={isUploading}
-        />
+/>
 
         <SegmentedControl
           fullWidth
@@ -71,8 +80,8 @@ export const UploadButton = ({ onSuccess }: { onSuccess: () => void }) => {
               value={promoSubtype}
               onChange={(val) => setPromoSubtype(val || 'promo_standard')}
               data={[
-                { value: 'promo_standard', label: 'Обычная реклама (услуги, товары)' },
-                { value: 'anchor', label: 'Короткая заставка (6 секунд, без текста)' },
+                { value: 'promo_standard', label: 'Обычная реклама' },
+                { value: 'anchor', label: 'Короткая заставка' },
               ]}
               size="lg"
               disabled={isUploading}
@@ -82,15 +91,13 @@ export const UploadButton = ({ onSuccess }: { onSuccess: () => void }) => {
               <>
                 <NumberInput
                   label="Максимум показов в час"
-                  description="Сколько раз можно показать этот ролик за час"
                   value={maxPerHour}
                   onChange={setMaxPerHour}
                   size="lg"
                   disabled={isUploading}
                 />
                 <NumberInput
-                  label="Кулдаун (в минутах)"
-                  description="Через сколько минут ролик можно показать снова"
+                  label="Кулдаун (минуты)"
                   value={cooldownMin}
                   onChange={setCooldownMin}
                   size="lg"

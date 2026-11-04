@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 let s3Client: S3Client | null = null;
 
@@ -45,11 +45,8 @@ export const getVideoUrl = (key: string): string => {
   if (key.startsWith('http')) return key;
   
   const bucket = process.env['S3_BUCKET'];
-  // ПРАВИЛЬНЫЙ ПУТЬ (Path-style):
   return `https://s3.regru.cloud/${bucket}/${key}`;
 };
-
-import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 export const deleteVideo = async (key: string): Promise<void> => {
   const client = getS3Client();
