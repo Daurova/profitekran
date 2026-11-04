@@ -1,6 +1,7 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import { playlistRoutes } from './infrastructure/http/playlist.route.js'; // <-- Добавили импорт
+import multipart from '@fastify/multipart'; // <-- Импорт
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({
@@ -16,7 +17,8 @@ export function buildApp(): FastifyInstance {
   app.get('/health', async () => {
     return { status: 'ok', timestamp: new Date().toISOString() };
   });
-
+  app.register(multipart); 
+  
   app.register(playlistRoutes);
   return app;
 }
