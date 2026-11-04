@@ -42,9 +42,9 @@ export const uploadVideo = async (fileBuffer: Buffer, fileName: string): Promise
 };
 
 export const getVideoUrl = (key: string): string => {
-  // Если это уже полная ссылка (http), возвращаем как есть
   if (key.startsWith('http')) return key;
   
   const bucket = process.env['S3_BUCKET'];
-  return `https://${bucket}.website.regru.cloud/${key}`;
+  // ПРАВИЛЬНЫЙ ПУТЬ (Path-style):
+  return `https://s3.regru.cloud/${bucket}/${key}`;
 };
