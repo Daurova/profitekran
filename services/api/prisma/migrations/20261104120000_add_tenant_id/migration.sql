@@ -1,0 +1,1 @@
+ALTER TABLE "Content" ADD COLUMN "tenantId" TEXT NOT NULL DEFAULT 'default';

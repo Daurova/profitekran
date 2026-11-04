@@ -1,15 +1,23 @@
 import { useState } from 'react';
 import { uploadVideoToS3, addVideoToDb } from '@/shared/api/client';
 
+interface UploadParams {
+  file: File;
+  type: string;
+  maxPerHour?: number;
+  cooldownMin?: number;
+  requiresConsent?: boolean;
+}
+
 export const useUpload = (onSuccess: () => void) => {
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  const upload = async (file: File | null) => {
-    if (!file) return;
+  const upload = async (params: UploadParams) => {
+    if (!params.file) return;
 
-    if (!file.type.startsWith('video/')) {
+    if (!params.file.type.startsWith('video/')) {
       setError('Пожалуйста, выберите видеофайл');
       return;
     }
@@ -19,9 +27,19 @@ export const useUpload = (onSuccess: () => void) => {
     setProgress(30);
 
     try {
-      const uploadData = await uploadVideoToS3(file);
+      // 1. Загружаем файл в S3
+      const uploadData = await uploadVideoToS3(params.file);
       setProgress(70);
-      await addVideoToDb(uploadData.key, 'BASE');
+
+      // 2. Отправляем метаданные в базу
+      await addVideoToDb({
+        key: uploadData.key,
+        type: params.type,
+        maxPerHour: params.maxPerHour,
+        cooldownMin: params.cooldownMin,
+        requiresConsent: params.requiresConsent,
+      });
+
       setProgress(100);
       onSuccess();
     } catch (err) {

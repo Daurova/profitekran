@@ -21,12 +21,18 @@ export const uploadVideoToS3 = async (file: File): Promise<{ key: string }> => {
   return res.json();
 };
 
-// 3. Добавить запись о видео в базу
-export const addVideoToDb = async (key: string, type: string) => {
+// 3. Добавить запись о видео в базу (с метаданными)
+export const addVideoToDb = async (data: {
+  key: string;
+  type: string;
+  maxPerHour?: number;
+  cooldownMin?: number;
+  requiresConsent?: boolean;
+}) => {
   const res = await fetch(`${API_URL}/add-video`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ key, type }),
+    body: JSON.stringify(data), // <-- Отправляем весь объект
   });
 
   if (!res.ok) throw new Error('Ошибка добавления в базу');

@@ -69,6 +69,9 @@ jobs:
             
             docker compose -f docker-compose.prod.yml exec -T postgres psql -U admin -d tv_platform -c "SELECT 1 FROM information_schema.columns WHERE table_name = 'Content' AND column_name = 'dayparts'" | grep -q 1 && \
             docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate resolve --applied 20261102183637_add_dayparts || true
+
+            docker compose -f docker-compose.prod.yml exec -T postgres psql -U admin -d tv_platform -c "SELECT 1 FROM information_schema.columns WHERE table_name = 'Content' AND column_name = 'tenantId'" | grep -q 1 && \
+            docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate resolve --applied 20261104120000_add_tenant_id || true
             
             # 7. Применяем миграции
             docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
