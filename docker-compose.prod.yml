@@ -25,7 +25,7 @@ services:
       - postgres
     volumes:
       - ./apps/tv-pwa/dist/videos-light:/apps/tv-pwa/public/videos-light:ro
-    command: sh -c "npx prisma db push && npm run db:seed && npm start"
+    command: sh -c "npx prisma db push && npm start"
     restart: always
 
   nginx:
