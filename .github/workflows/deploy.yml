@@ -75,17 +75,4 @@ jobs:
             
             # 7. Применяем миграции
             docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
-                        # 8. Настраиваем CORS для S3 (Big Tech Way)
-            # Устанавливаем AWS CLI
-            apt-get update && apt-get install -y awscli
             
-            # Настраиваем credentials для AWS CLI
-            aws configure set aws_access_key_id ${{ secrets.S3_ACCESS_KEY }}
-            aws configure set aws_secret_access_key ${{ secrets.S3_SECRET_KEY }}
-            aws configure set default.region ru-1
-            
-            # Применяем политику CORS
-            aws s3api put-bucket-cors --bucket profitekran-media --endpoint-url https://s3.regru.cloud --cors-configuration file://cors.json
-            
-            # 9. Делаем файлы публично доступными (Bucket Policy)
-            aws s3api put-bucket-policy --bucket profitekran-media --endpoint-url https://s3.regru.cloud --policy file://policy.json
