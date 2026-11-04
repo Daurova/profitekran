@@ -10,7 +10,7 @@ declare let self: ServiceWorkerGlobalScope;
 precacheAndRoute(self.__WB_MANIFEST);
 
 registerRoute(
-  ({ url }) => url.pathname.endsWith('.mp4'),
+  ({ url }) => url.pathname.endsWith('.mp4') && url.origin === self.location.origin,
   new CacheFirst({
     cacheName: 'videos-cache',
     plugins: [
