@@ -1,27 +1,32 @@
 'use client';
 
-import { Container, Title, Card, Text } from '@mantine/core';
+import { Container, Title, Stack } from '@mantine/core';
+import { useQueryClient } from '@tanstack/react-query';
 import { UploadButton } from '@/features/upload-video/ui/UploadButton';
+import { VideoList } from '@/widgets/video-list/ui/VideoList';
+import { notifications } from '@mantine/notifications';
 
 export const AdminPage = () => {
+  const queryClient = useQueryClient();
+
   const handleUploadSuccess = () => {
-    alert('Видео успешно загружено и добавлено в базу!');
-    // Позже здесь мы будем обновлять список видео
+    notifications.show({
+      title: 'Успех',
+      message: 'Видео загружено и добавлено в базу',
+      color: 'green',
+    });
+    // Инвалидируем кэш — React Query сам перезапросит список видео
+    queryClient.invalidateQueries({ queryKey: ['videos'] });
   };
 
   return (
-    <Container size="md" py="xl">
-      <Title order={1} mb="lg">Управление видео</Title>
+    <Container size="lg" py="xl">
+      <Title order={1} mb="xl">Управление видео</Title>
       
-      <Card withBorder p="xl">
-        <Text fw={500} mb="sm">Загрузить новое видео</Text>
-        <Text size="sm" c="dimmed" mb="md">
-          Нажмите кнопку ниже, чтобы выбрать файл с устройства
-        </Text>
-        
-        {/* ВОТ ЗДЕСЬ МЫ ВЫЗЫВАЕМ НАШ РЕАЛЬНЫЙ КОМПОНЕНТ */}
+      <Stack gap="xl">
         <UploadButton onSuccess={handleUploadSuccess} />
-      </Card>
+        <VideoList />
+      </Stack>
     </Container>
   );
 };

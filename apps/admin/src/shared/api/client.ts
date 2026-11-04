@@ -1,5 +1,19 @@
 const API_URL = 'https://profitekran.online/api';
 
+export interface VideoFromDb {
+  id: string;
+  tenantId: string;
+  type: string;
+  url: string;
+  durationSec: number;
+  hasAudio: boolean;
+  maxPerHour: number | null;
+  cooldownMin: number | null;
+  requiresConsent: boolean;
+  dayparts: string[];
+  createdAt: string;
+}
+
 // 1. Получить список видео
 export const fetchVideos = async () => {
   const res = await fetch(`${API_URL}/videos`);
@@ -36,5 +50,14 @@ export const addVideoToDb = async (data: {
   });
 
   if (!res.ok) throw new Error('Ошибка добавления в базу');
+  return res.json();
+};
+
+// Удалить видео по ID
+export const deleteVideoById = async (id: string) => {
+  const res = await fetch(`${API_URL}/videos/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Ошибка удаления');
   return res.json();
 };

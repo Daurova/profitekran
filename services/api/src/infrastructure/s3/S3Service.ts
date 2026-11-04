@@ -48,3 +48,17 @@ export const getVideoUrl = (key: string): string => {
   // ПРАВИЛЬНЫЙ ПУТЬ (Path-style):
   return `https://s3.regru.cloud/${bucket}/${key}`;
 };
+
+import { DeleteObjectCommand } from '@aws-sdk/client-s3';
+
+export const deleteVideo = async (key: string): Promise<void> => {
+  const client = getS3Client();
+  const bucket = process.env['S3_BUCKET']!;
+  
+  const command = new DeleteObjectCommand({
+    Bucket: bucket,
+    Key: key,
+  });
+  
+  await client.send(command);
+};
