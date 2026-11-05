@@ -1,17 +1,12 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { AuthPage } from '@/screens/auth/ui/AuthPage';
 
 export const LoginScreen = () => {
-  const router = useRouter();
+  const handleSuccess = () => {
+    const url = '/admin';
+    window.location.href = url;
+  };
 
-  return (
-    <AuthPage 
-      onSuccess={() => {
-        router.push('/admin');
-        router.refresh();
-      }} 
-    />
-  );
+  return <AuthPage onSuccess={handleSuccess} />;
 };

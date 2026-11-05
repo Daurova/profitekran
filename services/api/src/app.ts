@@ -13,7 +13,7 @@ export function buildApp(): FastifyInstance {
   app.register(cookie);
   
   app.register(cors, {
-    origin: ['http://localhost:3000', 'https://profitekran.online'],
+    origin: ['http://localhost:3000', 'https://profitekran.online', 'https://designation-forbes-webcams-accepting.trycloudflare.com'],
     credentials: true, // <-- Разрешаем передачу куки
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
