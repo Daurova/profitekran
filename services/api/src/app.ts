@@ -10,10 +10,11 @@ export function buildApp(): FastifyInstance {
   });
 
   // Разрешаем запросы с любых адресов (на время разработки)
- app.register(cors, {
-  origin: true,
-  methods: ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
-});
+  app.register(cors, {
+    origin: ['http://localhost:3000', 'https://profitekran.online'],
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
 
   // Базовый роут для проверки работоспособности
   app.get('/health', async () => {
