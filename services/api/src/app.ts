@@ -2,6 +2,7 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import { playlistRoutes } from './infrastructure/http/playlist.route.js'; // <-- Добавили импорт
 import multipart from '@fastify/multipart'; // <-- Импорт
+import { authRoutes } from './infrastructure/http/auth.route.js';
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({
@@ -23,6 +24,8 @@ export function buildApp(): FastifyInstance {
       fileSize: 100 * 1024 * 1024, // 100 МБ (можно поставить больше, если нужно)
     },
   });  
+  app.register(authRoutes); // <-- Регистрация
+
   app.register(playlistRoutes);
   return app;
 }

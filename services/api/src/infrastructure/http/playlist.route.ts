@@ -1,14 +1,30 @@
 import { FastifyInstance } from 'fastify';
 import { GeneratePlaylistUseCase } from '../../application/use-cases/GeneratePlaylistUseCase.js';
 import { PrismaContentRepository } from '../repositories/PrismaContentRepository.js';
-import { getVideoUrl, uploadVideo, deleteVideo } from '../s3/S3Service.js'; // <-- Добавили deleteVideo
+import { getVideoUrl, uploadVideo, deleteVideo } from '../s3/S3Service.js';
 import { prisma } from '../database/prisma.js';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env['JWT_SECRET'] || 'super-secret-key-for-dev';
 
 export async function playlistRoutes(app: FastifyInstance) {
   const contentRepository = new PrismaContentRepository();
   const generatePlaylistUseCase = new GeneratePlaylistUseCase(contentRepository);
 
-  // 1. Плейлист
+  // Middleware для проверки JWT (находится ВНУТРИ функции роутов)
+  const authPreHandler = async (request: any, reply: any) => {
+    try {
+      const authHeader = request.headers.authorization;
+      if (!authHeader) throw new Error('Нет токена');
+      const token = authHeader.split(' ')[1];
+      const decoded = jwt.verify(token, JWT_SECRET) as any;
+      request.user = decoded;
+    } catch (err) {
+      return reply.status(401).send({ error: 'Неавторизован' });
+    }
+  };
+
+  // 1. Плейлист (ОТКРЫТ для ТВ, без авторизации)
   app.get('/playlist', async (request, reply) => {
     try {
       const playlist = await generatePlaylistUseCase.execute();
@@ -19,31 +35,28 @@ export async function playlistRoutes(app: FastifyInstance) {
     }
   });
 
-  // 2. Загрузка файла в S3
-     app.post('/upload', async (request, reply) => {
+  // 2. Загрузка файла в S3 (ЗАЩИЩЕНО)
+  app.post('/upload', { preHandler: authPreHandler }, async (request, reply) => {
     try {
       console.log('--- НАЧАЛО ЗАГРУЗКИ ---');
-      
       const data = await request.file();
       if (!data) return reply.status(400).send({ error: 'Нет файла' });
-      
-      console.log('1. Файл получен:', data.filename, 'MIME:', data.mimetype);
 
+      console.log('1. Файл получен:', data.filename, 'MIME:', data.mimetype);
       const buffer = await data.toBuffer();
       console.log('2. Буфер создан, размер:', buffer.length, 'байт');
 
       console.log('3. Пытаемся прочитать метаданные...');
       const { parseBuffer } = await import('music-metadata');
       const metadata = await parseBuffer(buffer, data.mimetype);
-      
       console.log('4. Метаданные прочитаны. Длительность:', metadata.format.duration);
-      
+
       const durationSec = Math.round(metadata.format.duration || 15);
       console.log('5. Итоговая длительность (округленная):', durationSec);
 
       const key = await uploadVideo(buffer, data.filename);
       console.log('6. Файл загружен в S3, ключ:', key);
-      
+
       return { status: 'success', key, url: getVideoUrl(key), durationSec };
     } catch (error) {
       console.error('❌ ОШИБКА В /UPLOAD:', error);
@@ -51,22 +64,16 @@ export async function playlistRoutes(app: FastifyInstance) {
       return reply.status(500).send({ error: 'Ошибка загрузки' });
     }
   });
-    // 3. Добавление записи в базу
-  app.post('/add-video', async (request, reply) => {
+
+  // 3. Добавление записи в базу (ЗАЩИЩЕНО)
+  app.post('/add-video', { preHandler: authPreHandler }, async (request, reply) => {
     try {
       console.log('--- НАЧАЛО /ADD-VIDEO ---');
-      
       const { key, type, durationSec, maxPerHour, cooldownMin, requiresConsent } = request.body as { 
-        key: string, 
-        type: string, 
-        durationSec: number,
-        maxPerHour?: number,
-        cooldownMin?: number,
-        requiresConsent?: boolean
+        key: string, type: string, durationSec: number, maxPerHour?: number, cooldownMin?: number, requiresConsent?: boolean
       };
       
       console.log('Полученные данные:', { key, type, durationSec, maxPerHour, cooldownMin, requiresConsent });
-
       if (!key || !type) return reply.status(400).send({ error: 'Нужны key и type' });
 
       const content = await prisma.content.create({
@@ -79,11 +86,11 @@ export async function playlistRoutes(app: FastifyInstance) {
           cooldownMin: cooldownMin ?? null,
           requiresConsent: requiresConsent || false,
           dayparts: ['09-11', '11-14', '14-17', '17-20', '20-22'],
+          tenantId: 'default',
         },
       });
 
       console.log('Запись создана, durationSec в базе:', content.durationSec);
-
       return { status: 'success', content };
     } catch (error) {
       console.error('❌ ОШИБКА В /ADD-VIDEO:', error);
@@ -92,8 +99,8 @@ export async function playlistRoutes(app: FastifyInstance) {
     }
   });
 
-  // 4. Получение списка видео (НОВЫЙ РОУТ)
-  app.get('/videos', async (request, reply) => {
+  // 4. Получение списка видео (ЗАЩИЩЕНО)
+  app.get('/videos', { preHandler: authPreHandler }, async (request, reply) => {
     try {
       const videos = await prisma.content.findMany({
         orderBy: { createdAt: 'desc' },
@@ -105,8 +112,8 @@ export async function playlistRoutes(app: FastifyInstance) {
     }
   });
 
-  // 5. Удаление видео (НОВЫЙ РОУТ)
-  app.delete('/videos/:id', async (request, reply) => {
+  // 5. Удаление видео (ЗАЩИЩЕНО)
+  app.delete('/videos/:id', { preHandler: authPreHandler }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
       
