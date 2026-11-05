@@ -27,5 +27,9 @@ export function buildApp(): FastifyInstance {
   });  
   app.register(authRoutes, { prefix: '/auth' }); 
   app.register(playlistRoutes);
+    // Временный дебаг-роут для просмотра всех зарегистрированных путей
+  app.get('/debug-routes', async () => {
+    return app.printRoutes();
+  });
   return app;
 }
