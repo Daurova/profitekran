@@ -1,4 +1,4 @@
-const API_URL = 'https://profitekran.online/api';
+const API_URL = 'https://explanation-outputs-pierce-another.trycloudflare.com';
 
 export interface VideoFromDb {
   id: string;
