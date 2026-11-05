@@ -11,7 +11,7 @@ export async function playlistRoutes(app: FastifyInstance) {
   const contentRepository = new PrismaContentRepository();
   const generatePlaylistUseCase = new GeneratePlaylistUseCase(contentRepository);
 
-  // Middleware для проверки JWT (находится ВНУТРИ функции роутов)
+  // Middleware для проверки JWT
   const authPreHandler = async (request: any, reply: any) => {
     try {
       const authHeader = request.headers.authorization;
@@ -38,28 +38,17 @@ export async function playlistRoutes(app: FastifyInstance) {
   // 2. Загрузка файла в S3 (ЗАЩИЩЕНО)
   app.post('/upload', { preHandler: authPreHandler }, async (request, reply) => {
     try {
-      console.log('--- НАЧАЛО ЗАГРУЗКИ ---');
       const data = await request.file();
       if (!data) return reply.status(400).send({ error: 'Нет файла' });
 
-      console.log('1. Файл получен:', data.filename, 'MIME:', data.mimetype);
       const buffer = await data.toBuffer();
-      console.log('2. Буфер создан, размер:', buffer.length, 'байт');
-
-      console.log('3. Пытаемся прочитать метаданные...');
       const { parseBuffer } = await import('music-metadata');
       const metadata = await parseBuffer(buffer, data.mimetype);
-      console.log('4. Метаданные прочитаны. Длительность:', metadata.format.duration);
-
       const durationSec = Math.round(metadata.format.duration || 15);
-      console.log('5. Итоговая длительность (округленная):', durationSec);
 
       const key = await uploadVideo(buffer, data.filename);
-      console.log('6. Файл загружен в S3, ключ:', key);
-
       return { status: 'success', key, url: getVideoUrl(key), durationSec };
     } catch (error) {
-      console.error('❌ ОШИБКА В /UPLOAD:', error);
       app.log.error(error);
       return reply.status(500).send({ error: 'Ошибка загрузки' });
     }
@@ -68,12 +57,10 @@ export async function playlistRoutes(app: FastifyInstance) {
   // 3. Добавление записи в базу (ЗАЩИЩЕНО)
   app.post('/add-video', { preHandler: authPreHandler }, async (request, reply) => {
     try {
-      console.log('--- НАЧАЛО /ADD-VIDEO ---');
       const { key, type, durationSec, maxPerHour, cooldownMin, requiresConsent } = request.body as { 
         key: string, type: string, durationSec: number, maxPerHour?: number, cooldownMin?: number, requiresConsent?: boolean
       };
       
-      console.log('Полученные данные:', { key, type, durationSec, maxPerHour, cooldownMin, requiresConsent });
       if (!key || !type) return reply.status(400).send({ error: 'Нужны key и type' });
 
       const content = await prisma.content.create({
@@ -86,23 +73,22 @@ export async function playlistRoutes(app: FastifyInstance) {
           cooldownMin: cooldownMin ?? null,
           requiresConsent: requiresConsent || false,
           dayparts: ['09-11', '11-14', '14-17', '17-20', '20-22'],
-          tenantId: 'default',
+          tenantId: (request as any).user.tenantId,
         },
       });
 
-      console.log('Запись создана, durationSec в базе:', content.durationSec);
       return { status: 'success', content };
     } catch (error) {
-      console.error('❌ ОШИБКА В /ADD-VIDEO:', error);
       app.log.error(error);
       return reply.status(500).send({ error: 'Ошибка добавления видео' });
     }
   });
 
-  // 4. Получение списка видео (ЗАЩИЩЕНО)
+  // 4. Получение списка видео (ЗАЩИЩЕНО и ФИЛЬТР ПО ТЕНАНТУ)
   app.get('/videos', { preHandler: authPreHandler }, async (request, reply) => {
     try {
       const videos = await prisma.content.findMany({
+        where: { tenantId: (request as any).user.tenantId },
         orderBy: { createdAt: 'desc' },
       });
       return { status: 'success', data: videos };
@@ -112,13 +98,23 @@ export async function playlistRoutes(app: FastifyInstance) {
     }
   });
 
-  // 5. Удаление видео (ЗАЩИЩЕНО)
+  // 5. Удаление видео (ЗАЩИЩЕНО и ПРОВЕРЕНО ПО ТЕНАНТУ)
   app.delete('/videos/:id', { preHandler: authPreHandler }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
+      const userTenantId = (request as any).user.tenantId;
       
-      const content = await prisma.content.findUnique({ where: { id } });
-      if (!content) return reply.status(404).send({ error: 'Видео не найдено' });
+      // Ищем видео, но только если оно принадлежит этому тенанту
+      const content = await prisma.content.findFirst({ 
+        where: { 
+          id,
+          tenantId: userTenantId 
+        } 
+      });
+      
+      if (!content) {
+        return reply.status(404).send({ error: 'Видео не найдено или не принадлежит вам' });
+      }
 
       await deleteVideo(content.url);
       await prisma.content.delete({ where: { id } });
