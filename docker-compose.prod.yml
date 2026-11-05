@@ -42,6 +42,16 @@ services:
     depends_on:
       - api
     restart: always
+  
+  admin:
+    build:
+      context: ./apps/admin
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - api
+    restart: always
 
 volumes:
   postgres_data:

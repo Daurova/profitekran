@@ -1,4 +1,4 @@
-const API_URL = 'https://explanation-outputs-pierce-another.trycloudflare.com';
+const API_URL = 'http://api:4000';
 
 export interface VideoFromDb {
   id: string;

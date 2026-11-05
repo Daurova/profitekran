@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const API_URL = 'https://explanation-outputs-pierce-another.trycloudflare.com';
+const API_URL = 'http://api:4000';
 
 export const useAuth = (onSuccess: () => void) => {
   const [phone, setPhone] = useState('');
