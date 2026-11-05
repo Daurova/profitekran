@@ -63,9 +63,7 @@ jobs:
             
             # 5. Перезапускаем Docker
             cd ../..
-            docker compose -f docker-compose.prod.yml up -d --build api nginx            chmod -R 755 apps/tv-pwa/dist/videos-light
-            docker compose -f docker-compose.prod.yml restart nginx
-            
+            docker compose -f docker-compose.prod.yml up -d            
             # 6. Ждем, пока API полностью запустится
             echo "Waiting for API to be ready..."
             sleep 10
