@@ -64,7 +64,7 @@ jobs:
             # 4.1. Пересобираем Админку (Next.js)
             cd ../admin
             npm install
-            npm run build
+            npm run build -- --no-turbo
             
             # 5. Перезапускаем Docker
             cd ../..
