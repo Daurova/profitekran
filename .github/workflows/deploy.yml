@@ -21,6 +21,12 @@ jobs:
 
       - name: Generate Prisma Client
         run: cd services/api && npx prisma generate
+        
+      - name: Force install rolldown binding for CI
+        run: cd services/api && npm install @rolldown/binding-linux-x64-gnu --no-save
+      
+      - name: Run Tests
+        run: cd services/api && npm test
 
       - name: Run Tests
         run: cd services/api && npm test
