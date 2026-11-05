@@ -24,8 +24,7 @@ export function buildApp(): FastifyInstance {
       fileSize: 100 * 1024 * 1024, // 100 МБ (можно поставить больше, если нужно)
     },
   });  
-  app.register(authRoutes); // <-- Регистрация
-
+  app.register(authRoutes, { prefix: '/auth' }); 
   app.register(playlistRoutes);
   return app;
 }
