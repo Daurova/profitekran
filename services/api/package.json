@@ -38,6 +38,6 @@
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5",
-    "@rolldown/binding-linux-x64-gnu": "^1.2.16",
+    "@rolldown/binding-linux-x64-gnu": "^1.2.16"
   }
 }
