@@ -3,6 +3,7 @@
 import { Table, Button, Text, Card, Group, ActionIcon, Loader, Center } from '@mantine/core';
 import { IconTrash, IconRefresh } from '@tabler/icons-react';
 import { useVideoList } from '../model/useVideoList'; // <-- Импорт хука
+import { type VideoFromDb } from '@/shared/api/client';
 
 export const VideoList = () => {
   const { videos, isLoading, loadVideos, handleDelete } = useVideoList();
@@ -19,7 +20,7 @@ export const VideoList = () => {
     <Card withBorder>
       <Group justify="space-between" mb="md">
         <Text fw={500} size="lg">Загруженные видео ({videos.length})</Text>
-        <Button variant="light" leftSection={<IconRefresh size={16} />} onClick={loadVideos}>
+        <Button variant="light" leftSection={<IconRefresh size={16} />} onClick={() => loadVideos()}>
           Обновить
         </Button>
       </Group>
@@ -37,7 +38,7 @@ export const VideoList = () => {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {videos.map((video) => (
+            {videos.map((video: VideoFromDb) => (
               <Table.Tr key={video.id}>
                 <Table.Td>
                   <Text fw={500}>{video.type}</Text>

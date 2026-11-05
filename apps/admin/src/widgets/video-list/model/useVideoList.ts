@@ -1,12 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchVideos, deleteVideoById } from '@/shared/api/client';
+import { fetchVideos, deleteVideoById, type VideoFromDb } from '@/shared/api/client';
 import { notifications } from '@mantine/notifications';
 
 export const useVideoList = () => {
   const queryClient = useQueryClient();
 
   // 1. Загрузка списка (React Query сам следит за кэшем)
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, refetch } = useQuery<{ data: VideoFromDb[] }>({
     queryKey: ['videos'],
     queryFn: fetchVideos,
   });
