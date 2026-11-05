@@ -6,7 +6,67 @@ datasource db {
   provider = "postgresql"
 }
 
-// Перечисление типов контента (как в нашем TypeScript)
+// 1. Клиент (Бизнес)
+model Tenant {
+  id              String    @id @default(uuid())
+  name            String
+  subscriptionEnd DateTime? 
+  isActive        Boolean   @default(true)
+  
+  users           User[]
+  screens         Screen[]
+  contents        Content[]
+}
+
+// 2. Роли (Enum вместо String)
+enum UserRole {
+  ADMIN
+  SMM
+  DESIGNER
+}
+
+// 3. Сотрудник клиента
+model User {
+  id           String    @id @default(uuid())
+  phone        String    @unique
+  role         UserRole  @default(ADMIN) // <-- Enum
+  otpCode      String?
+  otpExpiresAt DateTime?
+  
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+}
+
+// 4. Экран (Приставка)
+model Screen {
+  id         String   @id @default(uuid())
+  name       String
+  deviceId   String   @unique
+  isActive   Boolean  @default(true)
+  
+  contentIds String[] @default([]) // <-- Явный дефолт
+  
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+}
+
+// 5. Видео
+model Content {
+  id              String      @id @default(uuid())
+  type            ContentType
+  url             String
+  durationSec     Int
+  hasAudio        Boolean     @default(false)
+  maxPerHour      Int?
+  cooldownMin     Int?
+  requiresConsent Boolean     @default(false)
+  dayparts        String[]
+  createdAt       DateTime    @default(now())
+  
+  tenantId        String
+  tenant          Tenant      @relation(fields: [tenantId], references: [id])
+}
+
 enum ContentType {
   BASE
   PROMO
@@ -16,18 +76,4 @@ enum ContentType {
   MASTER
   PRODUCT
   PARTNER
-}
-
-model Content {
-  id              String      @id @default(uuid())
-  tenantId        String      @default("default") 
-  type            ContentType
-  url             String
-  durationSec     Int
-  hasAudio        Boolean     @default(false)
-  maxPerHour      Int?
-  cooldownMin     Int?
-  requiresConsent Boolean     @default(false)
-  dayparts        String[]    // <-- ДОБАВИЛИ ЭТУ СТРОКУ
-  createdAt       DateTime    @default(now())
 }

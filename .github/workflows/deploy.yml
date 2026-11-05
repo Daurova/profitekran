@@ -62,8 +62,8 @@ jobs:
             docker compose -f docker-compose.prod.yml up -d --build
             chmod -R 755 apps/tv-pwa/dist/videos-light
             docker compose -f docker-compose.prod.yml restart nginx
+            
             # 6. Автоматический бейзлайнинг (Big Tech Way)
-            # Проверяем, какие миграции уже применены, и помечаем их
             docker compose -f docker-compose.prod.yml exec -T postgres psql -U admin -d tv_platform -c "SELECT 1 FROM information_schema.tables WHERE table_name = 'Content'" | grep -q 1 && \
             docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate resolve --applied 20261102135601_init || true
             
@@ -72,7 +72,9 @@ jobs:
 
             docker compose -f docker-compose.prod.yml exec -T postgres psql -U admin -d tv_platform -c "SELECT 1 FROM information_schema.columns WHERE table_name = 'Content' AND column_name = 'tenantId'" | grep -q 1 && \
             docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate resolve --applied 20261104120000_add_tenant_id || true
+
+            docker compose -f docker-compose.prod.yml exec -T postgres psql -U admin -d tv_platform -c "SELECT 1 FROM information_schema.tables WHERE table_name = 'Tenant'" | grep -q 1 && \
+            docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate resolve --applied 20261104160000_add_saas_models || true
             
             # 7. Применяем миграции
             docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
-            

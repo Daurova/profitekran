@@ -216,4 +216,85 @@ code src/pages/home/HomePage.tsx
 
 ---
 
-*Когда будешь готова начать Админку, просто напиши «Начинаем Админку»*.
+*Когда будешь готова начать Админку, просто напиши «Начинаем Админку»*.4
+Вот **максимально подробный** контекст проекта. Сохрани его в надежном месте (Docmost, Notion или просто в текстовый файл), чтобы мы могли продолжить с любого места без потери деталей.
+
+---
+
+# 📦 МАКСИМАЛЬНО ПОДРОБНЫЙ КОНТЕКСТ ПРОЕКТА: «ВДОХНОВЕНИЕ»
+
+## 🏗️ 1. ИНФРАСТРУКТУРА И ДЕПЛОЙ (PRODUCTION)
+*   **Хостинг:** Reg.ru (VPS), IP: `5.63.155.125`, ОС: Ubuntu 24.04.
+*   **Домен:** `profitekran.online`. HTTPS настроен через Certbot (Let's Encrypt), автоматическое перенаправление с HTTP на HTTPS.
+*   **Docker-контейнеры на сервере:**
+    *   `profitekran-postgres-1` (PostgreSQL 16).
+    *   `profitekran-api-1` (Fastify + Prisma).
+    *   `profitekran-nginx-1` (раздает PWA и проксирует API).
+*   **CI/CD (GitHub Actions):** Файл `.github/workflows/deploy.yml`.
+    *   **Триггер:** Пуш в ветку `main`.
+    *   **Шаги:**
+        1. `actions/checkout` (скачивание кода).
+        2. `actions/setup-node` (Node.js 22).
+        3. `npm install` и `npx prisma generate` для API.
+        4. `npm test` (Vitest с моками).
+        5. **Deploy via SSH:** создает `.env` с секретами S3, делает `git pull`, пересобирает фронтенд (`npm run build` в `apps/tv-pwa`), копирует видео, перезапускает Docker Compose.
+        6. **Автоматический бейзлайнинг миграций:** проверяет наличие таблиц/колонок и выполняет `prisma migrate resolve --applied` для каждой миграции, чтобы избежать ошибки P3005.
+        7. **Применение миграций:** `npx prisma migrate deploy`.
+*   **Хранение файлов (S3):**
+    *   Бакет в Reg.облаке: `profitekran-media`.
+    *   **Ссылки:** `https://s3.regru.cloud/profitekran-media/videos/...` (Path-style).
+    *   **CORS:** Настроен через AWS CLI в пайплайне (разрешены `GET`, `HEAD` для `https://profitekran.online`).
+    *   **Bucket Policy:** Разрешает публичное чтение (`s3:GetObject`).
+    *   **Секреты:** `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` хранятся в GitHub Secrets.
+
+## 💻 2. ТЕХНОЛОГИЧЕСКИЙ СТЕК
+*   **Монорепозиторий (папка `content`):**
+    *   `apps/tv-pwa` (Фронтенд для ТВ).
+    *   `apps/admin` (Админка на Next.js).
+    *   `services/api` (Бэкенд на Fastify).
+*   **Frontend (PWA):** React, Vite, Mantine, `@noriginmedia/norigin-spatial-navigation` (управление пультом), `vite-plugin-pwa` (Service Worker через `injectManifest`), IndexedDB (кэш видео).
+*   **Admin (Next.js):** Next.js 16 (App Router), TypeScript, Mantine, `@tanstack/react-query` (React Query), `@tabler/icons-react`.
+*   **Backend:** Node.js, Fastify, TypeScript, Prisma 7 (с Driver Adapters), `@aws-sdk/client-s3`, `music-metadata` (для чтения длительности видео).
+*   **База данных:** PostgreSQL (в Docker на локальном порту `5433`, на сервере — `5432`).
+*   **Тесты:** Vitest (интеграционные + юнит с моками S3 и `music-metadata`).
+
+## 🎯 3. ТЕКУЩИЙ ФУНКЦИОНАЛ (ЧТО РАБОТАЕТ)
+### A. Телевизор (PWA)
+*   Загружает плейлист через `GET /api/playlist`.
+*   Играет видео из S3 (ссылки формируются на бэкенде через `getVideoUrl`).
+*   **Service Worker** (`sw.ts`): Кэширует видео **только с нашего домена** (S3 игнорируется). Использует `RangeRequestsPlugin` для правильной отдачи кусков из кэша.
+*   **IndexedDB:** Сохраняет видео как `Blob` (через `getVideo` и `saveVideo` в `shared/lib/db.ts`). Работает офлайн.
+*   **UI:** Часы, логотип «ВДОХНОВЕНИЕ», стильный Glassmorphism.
+
+### B. Админка (Next.js)
+*   **Загрузка видео:** Форма с выбором файла, типа контента (Основное видео / Реклама).
+*   **Валидация:** Сервер через `music-metadata` определяет **реальную длительность** видео (не 15 сек, как было раньше).
+*   **Список видео:** Таблица с данными из базы (React Query). Кнопка «Обновить» и корзина для удаления.
+*   **Удаление:** Удаляет видео из базы и из S3 (через `deleteVideo`).
+*   **Сброс формы:** После успешной загрузки поле очищается (через `resetRef` из Mantine).
+*   **UI:** Адаптивный, простой (для пожилых людей), без лишних модалок.
+
+### C. Бэкенд (Fastify)
+*   `GET /playlist`: Генерирует плейлист (планировщик).
+*   `POST /upload`: Принимает файл, читает длительность через `music-metadata`, загружает в S3.
+*   `POST /add-video`: Сохраняет метаданные в базу (с длительностью и типом).
+*   `GET /videos`: Отдает список всех видео из базы.
+*   `DELETE /videos/:id`: Удаляет видео из базы и S3.
+*   **CORS:** Разрешены методы `GET`, `HEAD`, `POST`, `PUT`, `DELETE`, `OPTIONS`.
+
+## 🗄️ 4. СХЕМА БАЗЫ ДАННЫХ (Prisma)
+*   **Модель `Content` (Видео):** `id`, `tenantId` (пока `default`), `type` (enum: BASE, PROMO, COFFEE_ANCHOR, COFFEE_OFFER, SERVICES, MASTER, PRODUCT, PARTNER), `url` (ключ S3), `durationSec`, `hasAudio`, `maxPerHour`, `cooldownMin`, `requiresConsent`, `dayparts` (массив строк), `createdAt`.
+*   **Миграции:** 
+    1. `20261102135601_init` (создание Content).
+    2. `20261102183637_add_dayparts` (добавление dayparts).
+    3. `20261104120000_add_tenant_id` (добавление tenantId).
+*   **Планы на будущее:** Добавление таблиц `Tenant`, `User`, `Screen` (с массивом `contentIds` для связи экрана и видео).
+
+## ⏭️ 5. СЛЕДУЮЩИЙ ШАГ (В РАЗРАБОТКЕ)
+Переход к **полноценной SaaS-платформе (Мультитенантность)**.
+1.  **Схема БД:** Создать таблицы `Tenant` (клиент), `User` (сотрудник), `Screen` (экран). Использовать массив `contentIds` в `Screen`.
+2.  **Авторизация:** Вход в Админку по **номеру телефона (SMS OTP)**. Регистрация на SMS.RU, получение `api_id`. Эндпоинты `/auth/send-code` и `/auth/verify-code`. JWT-токен с `tenantId`.
+3.  **Device Provisioning (Привязка экранов):** Приставка генерирует `deviceId`. Клиент в Админке вводит код активации. Сервер связывает экран с тенантом.
+4.  **Биллинг:** Проверка `subscriptionEnd` у тенанта (если не оплачено — не отдавать плейлист).
+
+**Готовые архитектурные паттерны:** Clean Architecture (Domain, Application, Infrastructure), FSD (Feature-Sliced Design) для фронтенда, React Query для стейт-менеджмента на клиенте.
