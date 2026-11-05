@@ -28,9 +28,6 @@ jobs:
       - name: Run Tests
         run: cd services/api && npm test
 
-      - name: Run Tests
-        run: cd services/api && npm test
-
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -70,7 +67,11 @@ jobs:
             chmod -R 755 apps/tv-pwa/dist/videos-light
             docker compose -f docker-compose.prod.yml restart nginx
             
-            # 6. Автоматический бейзлайнинг (Big Tech Way)
+            # 6. Ждем, пока API полностью запустится
+            echo "Waiting for API to be ready..."
+            sleep 10
+            
+            # 7. Автоматический бейзлайнинг (Big Tech Way)
             docker compose -f docker-compose.prod.yml exec -T postgres psql -U admin -d tv_platform -c "SELECT 1 FROM information_schema.tables WHERE table_name = 'Content'" | grep -q 1 && \
             docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate resolve --applied 20261102135601_init || true
             
@@ -83,5 +84,5 @@ jobs:
             docker compose -f docker-compose.prod.yml exec -T postgres psql -U admin -d tv_platform -c "SELECT 1 FROM information_schema.tables WHERE table_name = 'Tenant'" | grep -q 1 && \
             docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate resolve --applied 20261104160000_add_saas_models || true
             
-            # 7. Применяем миграции
+            # 8. Применяем миграции
             docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
