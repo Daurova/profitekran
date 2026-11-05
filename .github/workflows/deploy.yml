@@ -64,8 +64,8 @@ jobs:
             # 4.1. Пересобираем Админку (Next.js)
             cd ../admin
             npm install
-            npm run build -- --no-turbo
-            
+            NEXT_DISABLE_TURBOPACK=1 npm run build
+
             # 5. Перезапускаем Docker
             cd ../..
             docker compose -f docker-compose.prod.yml up -d --build
