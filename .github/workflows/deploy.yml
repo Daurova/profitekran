@@ -50,7 +50,7 @@ jobs:
             # 2. Обновляем код
             git pull origin main
             
-            # 3. Пересобираем фронтенд
+            # 3. Пересобираем фронтенд (PWA)
             cd apps/tv-pwa
             npm install
             npm run build
@@ -60,6 +60,11 @@ jobs:
               mkdir -p dist/videos-light
               cp -r public/videos-light/* dist/videos-light/ 2>/dev/null || true
             fi
+            
+            # 4.1. Пересобираем Админку (Next.js)
+            cd ../admin
+            npm install
+            npm run build
             
             # 5. Перезапускаем Docker
             cd ../..
