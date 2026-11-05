@@ -1,5 +1,5 @@
 import { AdminPage } from '@/screens/admin/ui/AdminPage';
 
-export default function Home() {
+export default function AdminRoute() {
   return <AdminPage />;
 }

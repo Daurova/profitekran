@@ -4,7 +4,6 @@ import { Container, Title, Stack } from '@mantine/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { VideoList } from '@/widgets/video-list/ui/VideoList';
 import { notifications } from '@mantine/notifications';
-import { AuthGuard } from '@/features/auth-by-token/ui/AuthGuard';
 import { UploadButton } from '@/features/upload-video/ui/UploadButton';
 
 export const AdminPage = () => {
@@ -20,7 +19,6 @@ export const AdminPage = () => {
   };
 
   return (
-    <AuthGuard>
       <Container size="lg" py="xl">
         <Title order={1} mb="xl">Управление видео</Title>
         
@@ -29,6 +27,5 @@ export const AdminPage = () => {
           <VideoList />
         </Stack>
       </Container>
-    </AuthGuard>
   );
 };

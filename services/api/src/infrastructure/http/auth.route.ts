@@ -18,14 +18,24 @@ export async function authRoutes(app: FastifyInstance) {
     }
   });
 
-  // 2. Проверить код и получить токен
+  // 2. Проверить код и установить Cookie
   app.post('/auth/verify-code', async (request, reply) => {
     try {
       const { phone, code } = request.body as { phone: string, code: string };
       if (!phone || !code) return reply.status(400).send({ error: 'Нужны телефон и код' });
 
       const token = await authService.verifyCode(phone, code);
-      return { status: 'success', token };
+
+      // Устанавливаем HttpOnly куку
+      reply.setCookie('auth_token', token, {
+        path: '/',
+        httpOnly: true,
+        secure: process.env['NODE_ENV'] === 'production', // Только по HTTPS в продакшене
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7, // 7 дней
+      });
+
+      return { status: 'success', message: 'Вход выполнен' };
     } catch (error) {
       app.log.error(error);
       return reply.status(401).send({ error: error instanceof Error ? error.message : 'Ошибка входа' });

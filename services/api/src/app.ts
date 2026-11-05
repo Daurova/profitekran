@@ -3,14 +3,18 @@ import cors from '@fastify/cors';
 import { playlistRoutes } from './infrastructure/http/playlist.route.js';
 import multipart from '@fastify/multipart';
 import { authRoutes } from './infrastructure/http/auth.route.js';
+import cookie from '@fastify/cookie';
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({
     logger: true,
   });
 
+  app.register(cookie);
+  
   app.register(cors, {
     origin: ['http://localhost:3000', 'https://profitekran.online'],
+    credentials: true, // <-- Разрешаем передачу куки
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
@@ -26,12 +30,10 @@ export function buildApp(): FastifyInstance {
   });  
   
 
-  // ВОТ ЗДЕСЬ ИСПРАВЛЕНИЕ: убираем { prefix: '/auth' }
   app.register(authRoutes); 
-  
   app.register(playlistRoutes);
 
-  // Временный дебаг-роут для просмотра всех зарегистрированных путей
+  // Временный дебаг-роут
   app.get('/debug-routes', async () => {
     return app.printRoutes();
   });

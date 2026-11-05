@@ -42,13 +42,13 @@ export const useAuth = (onSuccess: () => void) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, code }),
+        credentials: 'include', // <-- Разрешаем браузеру сохранить HttpOnly куку
       });
       
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка входа');
 
-      localStorage.setItem('admin_token', data.token);
-      onSuccess();
+      onSuccess(); // Сообщаем странице, что вход выполнен
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Неверный код');
     } finally {

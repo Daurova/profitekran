@@ -11,8 +11,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <MantineProvider defaultColorScheme="light">
-        <Notifications position="top-center" />
-        {children}
+          <Notifications position="top-center" />
+          {children}
       </MantineProvider>
     </QueryClientProvider>
   );
