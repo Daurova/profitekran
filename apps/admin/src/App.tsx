@@ -9,15 +9,19 @@ function App() {
   return (
     <MantineProvider defaultColorScheme="light">
       <Notifications position="top-center" />
-      <BrowserRouter>
+      
+      {/* Добавили basename="/admin" */}
+      <BrowserRouter basename="/admin">
         <Routes>
           <Route path="/login" element={<AuthPage />} />
           <Route element={<ProtectedRoute />}>
-            <Route path="/admin" element={<AdminPage />} />
+            {/* Убрали /admin из пути, так как basename уже его подразумевает */}
+            <Route path="/" element={<AdminPage />} />
           </Route>          
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
+
     </MantineProvider>
   );
 }

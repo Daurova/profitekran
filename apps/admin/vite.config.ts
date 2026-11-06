@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'node:path';
 
 export default defineConfig({
+  base: '/admin/', // <-- Добавили для работы по пути /admin
   plugins: [react()],
   resolve: {
     alias: {
@@ -10,6 +11,6 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000, // <-- Добавили
+    port: 3000, 
   },
 });
