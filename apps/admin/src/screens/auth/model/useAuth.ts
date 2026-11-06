@@ -40,7 +40,7 @@ export const useAuth = () => {
     setIsLoading(true);
     setError(null);
 
-    try {
+        try {
       const res = await fetch(`${API_URL}/auth/verify-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,7 +51,7 @@ export const useAuth = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка входа');
 
-      navigate('/admin');
+      navigate('/'); // <-- Идем на корень (это и есть /admin)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Неверный код');
     } finally {
