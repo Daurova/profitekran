@@ -42,18 +42,18 @@ export const VideoList = () => {
                 <Table.Td>
                   <Text fw={500}>{video.type}</Text>
                 </Table.Td>
-                <Table.Td>
-                  {/* БЕЙДЖИК ФОРМАТА */}
+                                <Table.Td>
+                  {/* Устойчивая проверка к регистру */}
                   <Badge 
-                    color={video.orientation === 'HORIZONTAL' ? 'blue' : 'grape'} 
+                    color={video.orientation?.toUpperCase() === 'HORIZONTAL' ? 'blue' : 'grape'} 
                     variant="light"
                     leftSection={
-                      video.orientation === 'HORIZONTAL' 
+                      video.orientation?.toUpperCase() === 'HORIZONTAL' 
                         ? <IconDeviceTv size={12} /> 
                         : <IconDeviceMobile size={12} />
                     }
                   >
-                    {video.orientation === 'HORIZONTAL' ? 'ТВ' : 'Reels'}
+                    {video.orientation?.toUpperCase() === 'HORIZONTAL' ? 'ТВ' : 'Reels'}
                   </Badge>
                 </Table.Td>
                 <Table.Td>
