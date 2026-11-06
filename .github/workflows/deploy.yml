@@ -55,6 +55,15 @@ jobs:
             npm install
             npm run build
             
+            # 3.1. Собираем админку
+            cd ../admin
+            npm install
+            npm run build
+            
+            # Копируем собранную админку в папку, которую раздает Nginx
+            rm -rf ../tv-pwa/dist/admin
+            cp -r dist ../tv-pwa/dist/admin
+
             # 4. Возвращаем видео, если их нет
             if [ ! -d "dist/videos-light" ]; then
               mkdir -p dist/videos-light
