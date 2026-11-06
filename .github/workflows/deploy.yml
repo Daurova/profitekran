@@ -29,14 +29,14 @@ jobs:
       - name: Run Tests
         run: cd services/api && npm test
 
-      # --- СБОРКА АДМИНКИ (на мощностях GitHub) ---
+      # --- СБОРКА АДМИНКИ НА GITHUB ---
       - name: Install Admin dependencies
         run: cd apps/admin && npm install
         
       - name: Build Admin
         run: cd apps/admin && npm run build
 
-      # --- ДЕПЛОЙ ---
+      # --- КОПИРОВАНИЕ АДМИНКИ НА СЕРВЕР (без сборки на сервере) ---
       - name: Copy Admin to Server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -46,6 +46,8 @@ jobs:
           source: "apps/admin/dist/*"
           target: "/var/www/profitekran/apps/tv-pwa/dist/admin"
           strip_components: 2
+          overwrite: true
+          rm: true # Очищаем старую папку перед копированием
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -83,6 +85,7 @@ jobs:
             # 5. Перезапускаем Docker
             cd ../..
             docker compose -f docker-compose.prod.yml up -d            
+            
             # 6. Ждем, пока API полностью запустится
             echo "Waiting for API to be ready..."
             sleep 10
