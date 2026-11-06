@@ -1,5 +1,7 @@
-import { Providers } from './providers';
+import '@mantine/core/styles.css';
+import '@mantine/notifications/styles.css';
 import './globals.css';
+import { Providers } from './providers';
 
 export const metadata = {
   title: 'Админка',
