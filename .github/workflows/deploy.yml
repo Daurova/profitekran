@@ -36,7 +36,7 @@ jobs:
       - name: Build Admin
         run: cd apps/admin && npm run build
 
-      # --- КОПИРОВАНИЕ АДМИНКИ НА СЕРВЕР (без сборки на сервере) ---
+      # --- КОПИРОВАНИЕ АДМИНКИ В ПРАВИЛЬНУЮ ПАПКУ ---
       - name: Copy Admin to Server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -44,10 +44,10 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "apps/admin/dist/*"
-          target: "/var/www/profitekran/apps/tv-pwa/dist/admin"
+          target: "/var/www/profitekran/apps/admin/dist"  # <-- ИСПРАВЛЕНО
           strip_components: 2
           overwrite: true
-          rm: true # Очищаем старую папку перед копированием
+          rm: true
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
