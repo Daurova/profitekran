@@ -4,6 +4,7 @@ import { PrismaContentRepository } from '../repositories/PrismaContentRepository
 import { getVideoUrl, uploadVideo, deleteVideo } from '../s3/S3Service.js';
 import { prisma } from '../database/prisma.js';
 import jwt from 'jsonwebtoken';
+import { Orientation } from '@prisma/client';
 
 const JWT_SECRET = process.env['JWT_SECRET'] || 'super-secret-key-for-dev';
 
@@ -12,17 +13,14 @@ export async function playlistRoutes(app: FastifyInstance) {
   const generatePlaylistUseCase = new GeneratePlaylistUseCase(contentRepository);
 
   // Middleware для проверки JWT
-    const authPreHandler = async (request: any, reply: any) => {
+  const authPreHandler = async (request: any, reply: any) => {
     try {
       let token = '';
-      
-      // 1. Пытаемся взять токен из заголовка Authorization
       const authHeader = request.headers.authorization;
+      
       if (authHeader) {
         token = authHeader.split(' ')[1];
-      } 
-      // 2. Если заголовка нет, берем из куки auth_token
-      else if (request.cookies && request.cookies.auth_token) {
+      } else if (request.cookies && request.cookies.auth_token) {
         token = request.cookies.auth_token;
       }
 
@@ -35,10 +33,22 @@ export async function playlistRoutes(app: FastifyInstance) {
     }
   };
 
-  // 1. Плейлист (ОТКРЫТ для ТВ, без авторизации)
+  // 1. Плейлист (Требует tenantId, иначе 400)
   app.get('/playlist', async (request, reply) => {
     try {
-      const playlist = await generatePlaylistUseCase.execute();
+      const { tenantId } = request.query as { tenantId?: string };
+      
+      if (!tenantId) {
+        return reply.status(400).send({ error: 'Не передан tenantId. Укажите ?tenantId=...' });
+      }
+
+      // Проверяем, существует ли такой тенант (чтобы не отдавать левые данные)
+      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+      if (!tenant || !tenant.isActive) {
+        return reply.status(404).send({ error: 'Клиент не найден или неактивен' });
+      }
+
+      const playlist = await generatePlaylistUseCase.execute(tenantId);
       return { status: 'success', data: playlist };
     } catch (error) {
       app.log.error(error);
@@ -68,8 +78,16 @@ export async function playlistRoutes(app: FastifyInstance) {
   // 3. Добавление записи в базу (ЗАЩИЩЕНО)
   app.post('/add-video', { preHandler: authPreHandler }, async (request, reply) => {
     try {
-      const { key, type, durationSec, maxPerHour, cooldownMin, requiresConsent } = request.body as { 
-        key: string, type: string, durationSec: number, maxPerHour?: number, cooldownMin?: number, requiresConsent?: boolean
+      const { 
+        key, type, durationSec, orientation, maxPerHour, cooldownMin, requiresConsent 
+      } = request.body as { 
+        key: string, 
+        type: string, 
+        durationSec: number, 
+        orientation?: Orientation,
+        maxPerHour?: number, 
+        cooldownMin?: number, 
+        requiresConsent?: boolean
       };
       
       if (!key || !type) return reply.status(400).send({ error: 'Нужны key и type' });
@@ -80,6 +98,7 @@ export async function playlistRoutes(app: FastifyInstance) {
           url: key,
           durationSec: durationSec || 15,
           hasAudio: false,
+          orientation: orientation || 'HORIZONTAL',
           maxPerHour: maxPerHour ?? null,
           cooldownMin: cooldownMin ?? null,
           requiresConsent: requiresConsent || false,
@@ -115,7 +134,6 @@ export async function playlistRoutes(app: FastifyInstance) {
       const { id } = request.params as { id: string };
       const userTenantId = (request as any).user.tenantId;
       
-      // Ищем видео, но только если оно принадлежит этому тенанту
       const content = await prisma.content.findFirst({ 
         where: { 
           id,

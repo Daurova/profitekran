@@ -3,11 +3,12 @@ import { IContentRepository } from '../../domain/ports/IContentRepository.js';
 import { ContentItem, ContentType } from '../../domain/entities/ContentItem.js';
 
 export class PrismaContentRepository implements IContentRepository {
-  async getActiveContent(): Promise<ContentItem[]> {
-    // Достаем все видео из базы данных PostgreSQL
-    const dbContent = await prisma.content.findMany();
+  async getActiveContent(tenantId: string): Promise<ContentItem[]> { // <-- Добавили tenantId
+    // Достаем видео ТОЛЬКО для конкретного тенанта
+    const dbContent = await prisma.content.findMany({
+      where: { tenantId }, // <-- ФИЛЬТР
+    });
 
-    // Преобразуем данные из формата БД в формат нашего Domain-слоя
     return dbContent.map((item) => ({
       id: item.id,
       type: item.type as ContentType,
@@ -18,7 +19,6 @@ export class PrismaContentRepository implements IContentRepository {
       cooldownMin: item.cooldownMin ?? undefined,
       requiresConsent: item.requiresConsent,
       dayparts: item.dayparts,
-
     }));
   }
 }

@@ -7,32 +7,32 @@ const JWT_SECRET = process.env['JWT_SECRET'] || 'super-secret-key-for-dev';
 export class AuthService {
   // 1. Отправить код на телефон
   async sendCode(phone: string): Promise<void> {
-    // Генерируем 4-значный код
     const code = Math.floor(1000 + Math.random() * 9000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 минут
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    // Ищем пользователя по номеру
-    let user = await prisma.user.findUnique({ where: { phone } });
+    const user = await prisma.user.findUnique({ where: { phone } });
 
     if (!user) {
-      // Если пользователя нет, создаем нового (привязываем к дефолтному тенанту пока)
-      user = await prisma.user.create({
+      // Ищем дефолтного тенанта (первого в базе)
+      const defaultTenant = await prisma.tenant.findFirst();
+      if (!defaultTenant) throw new Error('В базе нет ни одного клиента (тенанта)');
+
+      await prisma.user.create({
         data: {
           phone,
           otpCode: code,
           otpExpiresAt: expiresAt,
-          tenantId: 'default', // Пока все новые юзеры в дефолтном тенанте
+          tenantId: defaultTenant.id,
         },
       });
     } else {
-      // Если есть, обновляем код
+      // Сбрасываем старый код и обновляем новый
       await prisma.user.update({
         where: { id: user.id },
         data: { otpCode: code, otpExpiresAt: expiresAt },
       });
     }
 
-    // Отправляем СМС (пока в консоль)
     await sendSmsCode(phone, code);
   }
 
@@ -46,18 +46,19 @@ export class AuthService {
       throw new Error('Код истек');
     }
 
-    // Код верный. Очищаем его и генерируем JWT
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { otpCode: null, otpExpiresAt: null },
-    });
+    // Big Tech Way: Транзакция (очистка кода и выдача токена)
+    const token = await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: { otpCode: null, otpExpiresAt: null },
+      });
 
-    // Создаем токен (живет 7 дней)
-    const token = jwt.sign(
-      { userId: user.id, tenantId: user.tenantId, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+      return jwt.sign(
+        { userId: user.id, tenantId: user.tenantId, role: user.role },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+    });
 
     return token;
   }

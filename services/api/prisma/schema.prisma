@@ -18,7 +18,7 @@ model Tenant {
   contents        Content[]
 }
 
-// 2. Роли (Enum вместо String)
+// 2. Роли
 enum UserRole {
   ADMIN
   SMM
@@ -29,12 +29,12 @@ enum UserRole {
 model User {
   id           String    @id @default(uuid())
   phone        String    @unique
-  role         UserRole  @default(ADMIN) // <-- Enum
+  role         UserRole  @default(ADMIN)
   otpCode      String?
   otpExpiresAt DateTime?
   
   tenantId     String
-  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade) // <-- ДОБАВЛЕНО
 }
 
 // 4. Экран (Приставка)
@@ -44,10 +44,10 @@ model Screen {
   deviceId   String   @unique
   isActive   Boolean  @default(true)
   
-  contentIds String[] @default([]) // <-- Явный дефолт
+  contentIds String[] @default([])
   
   tenantId   String
-  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade) // <-- ДОБАВЛЕНО
 }
 
 // 5. Видео
@@ -57,6 +57,7 @@ model Content {
   url             String
   durationSec     Int
   hasAudio        Boolean     @default(false)
+  orientation     Orientation @default(HORIZONTAL)
   maxPerHour      Int?
   cooldownMin     Int?
   requiresConsent Boolean     @default(false)
@@ -64,7 +65,12 @@ model Content {
   createdAt       DateTime    @default(now())
   
   tenantId        String
-  tenant          Tenant      @relation(fields: [tenantId], references: [id])
+  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade) // <-- ДОБАВЛЕНО
+}
+
+enum Orientation {
+  HORIZONTAL
+  VERTICAL
 }
 
 enum ContentType {

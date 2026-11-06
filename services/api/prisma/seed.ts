@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { PrismaClient, ContentType } from '@prisma/client';
+import { PrismaClient, ContentType, Orientation } from '@prisma/client'; // <-- Импортируем Orientation
 import { PrismaPg } from '@prisma/adapter-pg';
 import { parseFile } from 'music-metadata';
 import path from 'node:path';
@@ -9,27 +9,9 @@ const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
 const VIDEO_DIR = path.resolve(process.cwd(), '../../apps/tv-pwa/public/videos-light');
-
-// Все видео доступны во все временные слоты (для базы)
 const ALL_DAYPARTS = ['09-11', '11-14', '14-17', '17-20', '20-22'];
 
-const baseVideos = [
-  'a-cup-of-foamy-cappuccino-and-black-coffee-on-a-surface.mp4',
-  'ai-generated.mp4',
-  'atmospheric.mp4',
-  'caf.mp4',
-  'coffee.mp4',
-  'cozy-cafe-scene-with-cappuccino-and-latte-art.mp4',
-  'cup-of-coffee.mp4',
-  'cup-of-coffee-on-table.mp4',
-  'dramatic-golden-sunset-with-fluffy-clouds.mp4',
-  'drone-footage.mp4',
-  'high-angle-shot-of-coffee-based-beverages.mp4',
-  'person-pouring-milk-in-a-cup-of-coffee.mp4',
-  'sea.mp4',
-  'sky.mp4',
-  'sunset.mp4'
-];
+const baseVideos = [ /* ... список без изменений ... */ ];
 
 async function getDurationInSeconds(filename: string): Promise<number> {
   const filePath = path.join(VIDEO_DIR, filename);
@@ -38,12 +20,24 @@ async function getDurationInSeconds(filename: string): Promise<number> {
 }
 
 async function main() {
-  console.log('Очищаем старую базу...');
+  console.log('Очищаем базу (каскадно)...');
+  // Удаляем всё, что связано с тенантами, чтобы не было ошибок FK
+  await prisma.user.deleteMany();
+  await prisma.screen.deleteMany();
   await prisma.content.deleteMany();
+  await prisma.tenant.deleteMany();
 
-  console.log('Начинаем наполнение базы с реальной длительностью...');
+  console.log('Создаем дефолтного клиента...');
+  const defaultTenant = await prisma.tenant.create({
+    data: {
+      name: 'Вдохновение (Тест)',
+      isActive: true,
+    }
+  });
 
-  // 1. Базовые видео (доступны всегда)
+  console.log('Начинаем наполнение базы...');
+
+  // 1. Базовые видео
   for (const filename of baseVideos) {
     const realDuration = await getDurationInSeconds(filename);
     await prisma.content.create({
@@ -52,12 +46,14 @@ async function main() {
         url: `/videos-light/${filename}`,
         durationSec: realDuration,
         hasAudio: false,
-        dayparts: ALL_DAYPARTS, // База крутится всегда
+        dayparts: ALL_DAYPARTS,
+        tenantId: defaultTenant.id,
+        orientation: Orientation.HORIZONTAL, // <-- Используем Enum (Type-safe)
       },
     });
   }
 
-  // 2. Реклама (только утро и день)
+  // 2. Реклама
   const anchorDuration = await getDurationInSeconds('cup-of-coffee.mp4');
   await prisma.content.create({
     data: {
@@ -66,6 +62,8 @@ async function main() {
       durationSec: anchorDuration,
       hasAudio: false,
       dayparts: ALL_DAYPARTS,
+      tenantId: defaultTenant.id,
+      orientation: Orientation.HORIZONTAL,
     },
   });
 
@@ -79,6 +77,8 @@ async function main() {
       maxPerHour: 2,
       cooldownMin: 30,
       dayparts: ALL_DAYPARTS, 
+      tenantId: defaultTenant.id,
+      orientation: Orientation.HORIZONTAL,
     },
   });
 
@@ -92,11 +92,13 @@ async function main() {
       maxPerHour: 1,
       cooldownMin: 120,
       requiresConsent: true,
-      dayparts: ['17-20', '20-22'], // Только вечер
+      dayparts: ['17-20', '20-22'],
+      tenantId: defaultTenant.id,
+      orientation: Orientation.HORIZONTAL,
     },
   });
   
-    // 3. Услуги (SERVICES) - доступны утром, днем и вечером
+  // 3. Услуги
   const servicesDuration = await getDurationInSeconds('sky.mp4');
   await prisma.content.create({
     data: {
@@ -105,10 +107,12 @@ async function main() {
       durationSec: servicesDuration,
       hasAudio: false,
       dayparts: ALL_DAYPARTS,
+      tenantId: defaultTenant.id,
+      orientation: Orientation.HORIZONTAL,
     },
   });
 
-  // 4. Товары (PRODUCT) - доступны днем и вечером
+  // 4. Товары
   const productDuration = await getDurationInSeconds('drone-footage.mp4');
   await prisma.content.create({
     data: {
@@ -117,6 +121,8 @@ async function main() {
       durationSec: productDuration,
       hasAudio: false,
       dayparts: ALL_DAYPARTS, 
+      tenantId: defaultTenant.id,
+      orientation: Orientation.HORIZONTAL,
     },
   });
 

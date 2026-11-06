@@ -24,42 +24,45 @@ export class GeneratePlaylistUseCase {
     return '09-11'; 
   }
 
-  async execute(): Promise<ContentItem[]> {
-    const currentDaypart = this.getCurrentDaypart();
-    console.log(`[Планировщик] Генерируем эфир на 2 часа для слота: ${currentDaypart}`);
+  async execute(tenantId?: string): Promise<ContentItem[]> {
+    // Защита от пустого tenantId
+    if (!tenantId) {
+      throw new Error('Не передан ID клиента (tenantId)');
+    }
 
-    const allContent = await this.contentRepository.getActiveContent();
+    const currentDaypart = this.getCurrentDaypart();
+    console.log(`[Планировщик] Генерируем эфир для тенанта: ${tenantId} (слот: ${currentDaypart})`);
+
+    const allContent = await this.contentRepository.getActiveContent(tenantId);
     
     // Фильтруем по текущему времени
     let activeContent = allContent.filter(c => c.dayparts.includes(currentDaypart));
     if (activeContent.length === 0) activeContent = allContent;
 
     const baseContent = activeContent.filter(c => c.type === 'BASE');
-    if (baseContent.length === 0) throw new Error('Нет базового контента');
+    if (baseContent.length === 0) throw new Error('Нет базового контента для этого клиента');
 
     const playlist: ContentItem[] = [];
-    
-    // История показов для соблюдения частотных ограничений (id видео -> время последнего показа в секундах)
     const history = new Map<string, number>();
-    let currentVirtualTime = 0; // Виртуальное время эфира в секундах
-
-    // Генерируем эфир на 2 часа (7200 секунд)
+    let currentVirtualTime = 0; 
     const TOTAL_BROADCAST_TIME = 7200;
+
+    // Индекс для базовых видео (чтобы шли по кругу, а не рандомно)
+    let baseIndex = 0;
 
     while (currentVirtualTime < TOTAL_BROADCAST_TIME) {
       // 1. Заполняем BASE
       let currentBaseDuration = 0;
       while (currentBaseDuration < this.rules.baseDurationSec) {
-        // Берем базу по кругу
-        const baseVideo = baseContent[playlist.length % baseContent.length]!;
+        const baseVideo = baseContent[baseIndex % baseContent.length]!;
         playlist.push(baseVideo);
         currentBaseDuration += baseVideo.durationSec;
         currentVirtualTime += baseVideo.durationSec;
+        baseIndex++;
       }
 
       // 2. Заполняем PROMO-блок
       const promoTemplates = DAYPART_TEMPLATES[currentDaypart] || ['C'];
-      // Берем случайный шаблон из предпочтительных для этого времени
       const selectedTemplate = promoTemplates[Math.floor(Math.random() * promoTemplates.length)]!;
       const templateSlots = PROMO_TEMPLATES[selectedTemplate];
 
@@ -68,6 +71,7 @@ export class GeneratePlaylistUseCase {
       if (anchor) {
         playlist.push(anchor);
         currentVirtualTime += anchor.durationSec;
+        history.set(anchor.id, currentVirtualTime); // Фиксируем показ
       }
 
       // Слоты 2 и 3: Ищем подходящий контент с учетом частот
@@ -79,7 +83,7 @@ export class GeneratePlaylistUseCase {
           const lastShownTime = history.get(candidate.id) ?? -99999;
           const timeSinceLastShow = currentVirtualTime - lastShownTime;
 
-          // Проверяем кулдаун (в минутах) из базы или дефолтный
+          // Проверяем кулдаун (в минутах)
           const cooldownSec = (candidate.cooldownMin ?? 60) * 60;
 
           if (timeSinceLastShow >= cooldownSec) {
@@ -94,14 +98,14 @@ export class GeneratePlaylistUseCase {
           history.set(selectedPromo.id, currentVirtualTime);
           currentVirtualTime += selectedPromo.durationSec;
         } else {
-          const fallbackBase = baseContent[playlist.length % baseContent.length]!;
+          const fallbackBase = baseContent[baseIndex % baseContent.length]!;
           playlist.push(fallbackBase);
           currentVirtualTime += fallbackBase.durationSec;
+          baseIndex++;
         }
       }
     }
 
-        // Превращаем ключи S3 в полные ссылки
     return playlist.map(item => ({
       ...item,
       url: getVideoUrl(item.url),
