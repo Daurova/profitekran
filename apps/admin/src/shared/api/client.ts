@@ -70,3 +70,12 @@ export const deleteVideoById = async (id: string) => {
   if (!res.ok) throw new Error('Ошибка удаления');
   return res.json();
 };
+
+export const fetchMe = async () => {
+  const res = await fetch(`${API_URL}/auth/me`, {
+    headers: getAuthHeaders(),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Неавторизован');
+  return res.json();
+};

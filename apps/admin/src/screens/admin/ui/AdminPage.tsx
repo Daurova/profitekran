@@ -1,13 +1,18 @@
-'use client';
-
-import { Container, Title, Stack } from '@mantine/core';
-import { useQueryClient } from '@tanstack/react-query';
+import { Container, Title, Stack, Group, Text } from '@mantine/core';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { VideoList } from '@/widgets/video-list/ui/VideoList';
 import { notifications } from '@mantine/notifications';
 import { UploadButton } from '@/features/upload-video/ui/UploadButton';
+import { fetchMe } from '@/shared/api/client';
 
 export const AdminPage = () => {
   const queryClient = useQueryClient();
+
+  // Запрашиваем данные текущего пользователя (и его тенанта)
+  const { data: userData } = useQuery({
+    queryKey: ['me'],
+    queryFn: fetchMe,
+  });
 
   const handleUploadSuccess = () => {
     notifications.show({
@@ -20,7 +25,16 @@ export const AdminPage = () => {
 
   return (
       <Container size="lg" py="xl">
-        <Title order={1} mb="xl">Управление видео</Title>
+        <Group justify="space-between" mb="xl">
+          <Title order={1}>Управление видео</Title>
+          
+          {/* Выводим название тенанта, если данные загрузились */}
+          {userData?.user && (
+            <Text size="md" c="dimmed">
+              Клиент: <Text span fw={700} c="blue">{userData.user.tenantName}</Text>
+            </Text>
+          )}
+        </Group>
         
         <Stack gap="xl">
           <UploadButton onSuccess={handleUploadSuccess} />

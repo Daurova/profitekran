@@ -1,5 +1,9 @@
 import { FastifyInstance } from 'fastify';
 import { AuthService } from '../../application/services/AuthService.js';
+import jwt from 'jsonwebtoken'; 
+import { prisma } from '../database/prisma.js'
+
+const JWT_SECRET = process.env['JWT_SECRET'] || 'super-secret-key-for-dev';
 
 export async function authRoutes(app: FastifyInstance) {
   const authService = new AuthService();
@@ -42,17 +46,39 @@ export async function authRoutes(app: FastifyInstance) {
     }
   });
   
-  // 3. Проверка авторизации (для Vite-фронтенда)
+   // 3. Проверка авторизации и получение данных тенанта
   app.get('/auth/me', async (request, reply) => {
     try {
       const cookieHeader = request.headers.cookie;
-      // Проверяем, есть ли кука auth_token
       if (!cookieHeader || !cookieHeader.includes('auth_token=')) {
         return reply.status(401).send({ error: 'Неавторизован' });
       }
-      
-      // В идеале здесь нужно расшифровать JWT, но для MVP достаточно проверки наличия
-      return { status: 'success', message: 'Авторизован' };
+
+      // Достаем токен из куки
+      const token = cookieHeader.split('auth_token=')[1]?.split(';')[0];
+      if (!token) return reply.status(401).send({ error: 'Токен не найден' });
+
+      const decoded = jwt.verify(token, JWT_SECRET) as any;
+
+      // Ищем пользователя и его тенанта в базе
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        include: { tenant: true }
+      });
+
+      if (!user || !user.tenant) {
+        return reply.status(401).send({ error: 'Пользователь или тенант не найдены' });
+      }
+
+      return { 
+        status: 'success', 
+        user: {
+          id: user.id,
+          phone: user.phone,
+          role: user.role,
+          tenantName: user.tenant.name 
+        }
+      };
     } catch (error) {
       return reply.status(401).send({ error: 'Неавторизован' });
     }
