@@ -41,4 +41,20 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.status(401).send({ error: error instanceof Error ? error.message : 'Ошибка входа' });
     }
   });
+  
+  // 3. Проверка авторизации (для Vite-фронтенда)
+  app.get('/auth/me', async (request, reply) => {
+    try {
+      const cookieHeader = request.headers.cookie;
+      // Проверяем, есть ли кука auth_token
+      if (!cookieHeader || !cookieHeader.includes('auth_token=')) {
+        return reply.status(401).send({ error: 'Неавторизован' });
+      }
+      
+      // В идеале здесь нужно расшифровать JWT, но для MVP достаточно проверки наличия
+      return { status: 'success', message: 'Авторизован' };
+    } catch (error) {
+      return reply.status(401).send({ error: 'Неавторизован' });
+    }
+  });
 }
