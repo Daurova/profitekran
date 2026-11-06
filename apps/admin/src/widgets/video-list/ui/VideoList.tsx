@@ -1,8 +1,6 @@
-'use client';
-
-import { Table, Button, Text, Card, Group, ActionIcon, Loader, Center } from '@mantine/core';
-import { IconTrash, IconRefresh } from '@tabler/icons-react';
-import { useVideoList } from '../model/useVideoList'; // <-- Импорт хука
+import { Table, Button, Text, Card, Group, ActionIcon, Loader, Center, Badge } from '@mantine/core';
+import { IconTrash, IconRefresh, IconDeviceTv, IconDeviceMobile } from '@tabler/icons-react';
+import { useVideoList } from '../model/useVideoList';
 import { type VideoFromDb } from '@/shared/api/client';
 
 export const VideoList = () => {
@@ -32,6 +30,7 @@ export const VideoList = () => {
           <Table.Thead>
             <Table.Tr>
               <Table.Th>Тип</Table.Th>
+              <Table.Th>Формат</Table.Th> {/* <-- НОВАЯ КОЛОНКА */}
               <Table.Th>Ссылка</Table.Th>
               <Table.Th>Длительность</Table.Th>
               <Table.Th w={80}>Действия</Table.Th>
@@ -42,6 +41,20 @@ export const VideoList = () => {
               <Table.Tr key={video.id}>
                 <Table.Td>
                   <Text fw={500}>{video.type}</Text>
+                </Table.Td>
+                <Table.Td>
+                  {/* БЕЙДЖИК ФОРМАТА */}
+                  <Badge 
+                    color={video.orientation === 'HORIZONTAL' ? 'blue' : 'grape'} 
+                    variant="light"
+                    leftSection={
+                      video.orientation === 'HORIZONTAL' 
+                        ? <IconDeviceTv size={12} /> 
+                        : <IconDeviceMobile size={12} />
+                    }
+                  >
+                    {video.orientation === 'HORIZONTAL' ? 'ТВ' : 'Reels'}
+                  </Badge>
                 </Table.Td>
                 <Table.Td>
                   <Text size="xs" c="dimmed" lineClamp={1} style={{ maxWidth: 300 }}>

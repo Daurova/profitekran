@@ -4,10 +4,14 @@ import { uploadVideoToS3, addVideoToDb } from '@/shared/api/client';
 interface UploadParams {
   file: File;
   type: string;
+  orientation: 'HORIZONTAL' | 'VERTICAL'; // <-- Строгий тип
   maxPerHour?: number;
   cooldownMin?: number;
   requiresConsent?: boolean;
 }
+
+const MAX_FILE_SIZE_MB = 100;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 export const useUpload = (onSuccess: () => void) => {
   const [isUploading, setIsUploading] = useState(false);
@@ -17,8 +21,15 @@ export const useUpload = (onSuccess: () => void) => {
   const upload = async (params: UploadParams) => {
     if (!params.file) return;
 
+    // 1. Проверка типа файла
     if (!params.file.type.startsWith('video/')) {
-      setError('Пожалуйста, выберите видеофайл');
+      setError('Пожалуйста, выберите видеофайл (mp4, webm и т.д.)');
+      return;
+    }
+
+    // 2. Проверка размера файла
+    if (params.file.size > MAX_FILE_SIZE_BYTES) {
+      setError(`Файл слишком большой. Максимум ${MAX_FILE_SIZE_MB} МБ.`);
       return;
     }
 
@@ -27,15 +38,14 @@ export const useUpload = (onSuccess: () => void) => {
     setProgress(30);
 
     try {
-      // 1. Загружаем файл в S3 (сервер вернет durationSec)
       const uploadData = await uploadVideoToS3(params.file);
       setProgress(70);
 
-      // 2. Отправляем метаданные в базу (включая durationSec)
       await addVideoToDb({
         key: uploadData.key,
         type: params.type,
-        durationSec: uploadData.durationSec, // <-- ДОБАВИЛИ
+        durationSec: uploadData.durationSec,
+        orientation: params.orientation,
         maxPerHour: params.maxPerHour,
         cooldownMin: params.cooldownMin,
         requiresConsent: params.requiresConsent,

@@ -5,6 +5,7 @@ export interface VideoFromDb {
   url: string;
   durationSec: number;
   hasAudio: boolean;
+  orientation: 'HORIZONTAL' | 'VERTICAL'; // <-- Строгий тип
   maxPerHour: number | null;
   cooldownMin: number | null;
   requiresConsent: boolean;
@@ -12,16 +13,11 @@ export interface VideoFromDb {
   createdAt: string;
 }
 
-// В Vite переменные окружения начинаются с VITE_
 const API_URL = import.meta.env.VITE_API_URL || 'https://profitekran.online/api';
 
-const getAuthHeaders = () => {
-  const headers = new Headers();
-  // В Vite мы используем куки, они ставятся автоматически браузером
-  return headers;
-};
+const getAuthHeaders = () => new Headers();
 
-export const fetchVideos = async () => {
+export const fetchVideos = async (): Promise<{ status: string; data: VideoFromDb[] }> => {
   const res = await fetch(`${API_URL}/videos`, {
     headers: getAuthHeaders(),
     credentials: 'include',
@@ -49,6 +45,7 @@ export const addVideoToDb = async (data: {
   key: string;
   type: string;
   durationSec: number;
+  orientation: 'HORIZONTAL' | 'VERTICAL'; // <-- Строгий тип
   maxPerHour?: number;
   cooldownMin?: number;
   requiresConsent?: boolean;
