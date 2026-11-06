@@ -3,6 +3,7 @@ import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { AuthPage } from './screens/auth/ui/AuthPage';
 import { AdminPage } from './screens/admin/ui/AdminPage';
+import { ProtectedRoute } from './features/auth-by-token/ui/ProtectedRoute';
 
 function App() {
   return (
@@ -11,7 +12,9 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<AuthPage />} />
-          <Route path="/admin" element={<AdminPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/admin" element={<AdminPage />} />
+          </Route>          
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>

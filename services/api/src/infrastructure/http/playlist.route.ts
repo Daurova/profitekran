@@ -12,11 +12,22 @@ export async function playlistRoutes(app: FastifyInstance) {
   const generatePlaylistUseCase = new GeneratePlaylistUseCase(contentRepository);
 
   // Middleware для проверки JWT
-  const authPreHandler = async (request: any, reply: any) => {
+    const authPreHandler = async (request: any, reply: any) => {
     try {
+      let token = '';
+      
+      // 1. Пытаемся взять токен из заголовка Authorization
       const authHeader = request.headers.authorization;
-      if (!authHeader) throw new Error('Нет токена');
-      const token = authHeader.split(' ')[1];
+      if (authHeader) {
+        token = authHeader.split(' ')[1];
+      } 
+      // 2. Если заголовка нет, берем из куки auth_token
+      else if (request.cookies && request.cookies.auth_token) {
+        token = request.cookies.auth_token;
+      }
+
+      if (!token) throw new Error('Нет токена');
+      
       const decoded = jwt.verify(token, JWT_SECRET) as any;
       request.user = decoded;
     } catch (err) {
