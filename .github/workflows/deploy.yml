@@ -16,7 +16,8 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install dependencies
+      # --- СБОРКА БЭКЕНДА ---
+      - name: Install API dependencies
         run: cd services/api && npm install
 
       - name: Generate Prisma Client
@@ -27,6 +28,24 @@ jobs:
       
       - name: Run Tests
         run: cd services/api && npm test
+
+      # --- СБОРКА АДМИНКИ (на мощностях GitHub) ---
+      - name: Install Admin dependencies
+        run: cd apps/admin && npm install
+        
+      - name: Build Admin
+        run: cd apps/admin && npm run build
+
+      # --- ДЕПЛОЙ ---
+      - name: Copy Admin to Server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "apps/admin/dist/*"
+          target: "/var/www/profitekran/apps/tv-pwa/dist/admin"
+          strip_components: 2
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -55,15 +74,6 @@ jobs:
             npm install
             npm run build
             
-            # 3.1. Собираем админку
-            cd ../admin
-            npm install
-            npm run build
-            
-            # Копируем собранную админку в папку, которую раздает Nginx
-            rm -rf ../tv-pwa/dist/admin
-            cp -r dist ../tv-pwa/dist/admin
-
             # 4. Возвращаем видео, если их нет
             if [ ! -d "dist/videos-light" ]; then
               mkdir -p dist/videos-light
