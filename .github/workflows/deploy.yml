@@ -66,24 +66,13 @@ jobs:
             npm install
             npm run build
             
-            # 5. Перезапускаем Docker (с принудительным пересозданием, чтобы применить volume)
+            # 5. Перезапускаем Docker. Флаг --build заставит Docker пересобрать образ API с новыми миграциями!
             cd ../..
-            docker compose -f docker-compose.prod.yml up -d --force-recreate
+            docker compose -f docker-compose.prod.yml up -d --build
             
             # 6. Ждем API и применяем миграции
             echo "Waiting for API..."
             sleep 10
             
-            docker compose -f docker-compose.prod.yml exec -T postgres psql -U admin -d tv_platform -c "SELECT 1 FROM information_schema.tables WHERE table_name = 'Content'" | grep -q 1 && \
-            docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate resolve --applied 20261102135601_init || true
-            
-            docker compose -f docker-compose.prod.yml exec -T postgres psql -U admin -d tv_platform -c "SELECT 1 FROM information_schema.columns WHERE table_name = 'Content' AND column_name = 'dayparts'" | grep -q 1 && \
-            docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate resolve --applied 20261102183637_add_dayparts || true
-
-            docker compose -f docker-compose.prod.yml exec -T postgres psql -U admin -d tv_platform -c "SELECT 1 FROM information_schema.columns WHERE table_name = 'Content' AND column_name = 'tenantId'" | grep -q 1 && \
-            docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate resolve --applied 20261104120000_add_tenant_id || true
-
-            docker compose -f docker-compose.prod.yml exec -T postgres psql -U admin -d tv_platform -c "SELECT 1 FROM information_schema.tables WHERE table_name = 'Tenant'" | grep -q 1 && \
-            docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate resolve --applied 20261104160000_add_saas_models || true
-            
+            # 7. Применяем миграции
             docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
