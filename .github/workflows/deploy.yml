@@ -43,8 +43,8 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "apps/admin/dist/*"
-          target: "/var/www/profitekran/apps/admin/dist"  # <-- ИСПРАВЛЕНО
+          source: "apps/admin/dist/**"         # <-- Звездочки (берем содержимое)
+          target: "/var/www/profitekran/apps/admin/dist"  # <-- Копируем прямо в dist
           strip_components: 2
           overwrite: true
           rm: true
