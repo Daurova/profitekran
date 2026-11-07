@@ -12,16 +12,29 @@ export interface ContentItem {
   hasAudio: boolean;
 }
 
+// Функция для получения или генерации ID устройства (6 символов)
+const getDeviceId = () => {
+  let deviceId = localStorage.getItem('device_id');
+  if (!deviceId) {
+    // Генерируем 6-значный код (например: A1B2C3)
+    deviceId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    localStorage.setItem('device_id', deviceId);
+  }
+  return deviceId;
+};
+
 export const HomePage = () => {
   const [videos, setVideos] = useState<ContentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  const API_URL = '/api/playlist';
 
   useEffect(() => {
     const fetchPlaylist = async () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+      // Получаем ID устройства и передаем его на сервер
+      const deviceId = getDeviceId();
+      const API_URL = `/api/playlist?deviceId=${deviceId}`;
 
       try {
         const response = await fetch(API_URL, { signal: controller.signal });

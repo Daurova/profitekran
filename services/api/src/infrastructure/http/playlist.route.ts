@@ -34,21 +34,34 @@ export async function playlistRoutes(app: FastifyInstance) {
   };
 
   // 1. Плейлист (Требует tenantId, иначе 400)
+    // 1. Плейлист (ОТКРЫТ для ТВ, принимает ?deviceId=...)
   app.get('/playlist', async (request, reply) => {
     try {
-      const { tenantId } = request.query as { tenantId?: string };
+      const { deviceId } = request.query as { deviceId?: string };
       
-      if (!tenantId) {
-        return reply.status(400).send({ error: 'Не передан tenantId. Укажите ?tenantId=...' });
+      // Если deviceId нет — сразу отдаем 400
+      if (!deviceId) {
+        return reply.status(400).send({ error: 'Не передан deviceId. Укажите ?deviceId=...' });
       }
 
-      // Проверяем, существует ли такой тенант (чтобы не отдавать левые данные)
-      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
-      if (!tenant || !tenant.isActive) {
-        return reply.status(404).send({ error: 'Клиент не найден или неактивен' });
+      // Ищем экран (приставку) в базе по deviceId
+      const screen = await prisma.screen.findUnique({ 
+        where: { deviceId },
+        include: { tenant: true } // Сразу подтягиваем данные клиента
+      });
+
+      // Если экран не найден или он отключен — 403
+      if (!screen || !screen.isActive) {
+        return reply.status(403).send({ error: 'Экран не активирован или отключен' });
       }
 
-      const playlist = await generatePlaylistUseCase.execute(tenantId);
+      // Проверяем, активен ли сам клиент (тенант) — вдруг у него не оплачен тариф
+      if (!screen.tenant.isActive) {
+        return reply.status(403).send({ error: 'Подписка клиента приостановлена' });
+      }
+
+      // Генерируем плейлист для найденного тенанта
+      const playlist = await generatePlaylistUseCase.execute(screen.tenantId);
       return { status: 'success', data: playlist };
     } catch (error) {
       app.log.error(error);
