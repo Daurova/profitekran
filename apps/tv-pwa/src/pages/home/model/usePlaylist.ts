@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchPlaylist } from '../../../shared/api/playlist';
 import { getDeviceId } from '../../../shared/lib/device';
-import { ContentItem } from '../HomePage';
+import { type ContentItem } from '../HomePage';
 
 export const usePlaylist = () => {
   const [videos, setVideos] = useState<ContentItem[]>([]);
