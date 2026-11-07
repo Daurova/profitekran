@@ -13,9 +13,11 @@ export const usePlaylist = () => {
       const deviceId = getDeviceId();
       const data = await fetchPlaylist(deviceId);
 
-      // Если сервер вернул 403
+      // ЖЕСТКО: Если 403, всегда показываем экран активации и чистим кэш
       if (data.status === 'unauthorized') {
         setIsUnauthorized(true);
+        setVideos([]);
+        localStorage.removeItem('cached_playlist'); // Удаляем старый кэш
         setIsLoading(false);
         return false;
       }
@@ -35,18 +37,16 @@ export const usePlaylist = () => {
         return true;
       }
     } catch (err) {
-      // Если произошла ошибка сети, пробуем взять кэш
+      // При ошибке сети (если нет интернета) берем кэш
       const cached = localStorage.getItem('cached_playlist');
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed.length > 0) {
           setVideos(parsed);
         } else {
-          // Если кэш пустой — показываем экран активации
           setIsUnauthorized(true);
         }
       } else {
-        // Если кэша нет вообще — показываем экран активации
         setIsUnauthorized(true);
       }
       setIsLoading(false);
