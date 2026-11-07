@@ -167,4 +167,27 @@ export async function playlistRoutes(app: FastifyInstance) {
       return reply.status(500).send({ error: 'Ошибка удаления' });
     }
   });
+
+    // 6. Добавление экрана (привязка приставки к клиенту)
+  app.post('/screens', { preHandler: authPreHandler }, async (request, reply) => {
+    try {
+      const { deviceId, name } = request.body as { deviceId: string, name: string };
+      const tenantId = (request as any).user.tenantId;
+
+      if (!deviceId || !name) return reply.status(400).send({ error: 'Нужны deviceId и name' });
+
+      const screen = await prisma.screen.create({
+        data: {
+          deviceId,
+          name,
+          tenantId,
+        },
+      });
+
+      return { status: 'success', screen };
+    } catch (error) {
+      app.log.error(error);
+      return reply.status(500).send({ error: 'Ошибка добавления экрана' });
+    }
+  });
 }

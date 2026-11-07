@@ -79,3 +79,14 @@ export const fetchMe = async () => {
   if (!res.ok) throw new Error('Неавторизован');
   return res.json();
 };
+
+export const addScreen = async (deviceId: string, name: string) => {
+  const res = await fetch(`${API_URL}/screens`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deviceId, name }),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Ошибка добавления экрана');
+  return res.json();
+};
