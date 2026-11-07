@@ -4,11 +4,11 @@ import { VideoList } from '@/widgets/video-list/ui/VideoList';
 import { notifications } from '@mantine/notifications';
 import { UploadButton } from '@/features/upload-video/ui/UploadButton';
 import { fetchMe } from '@/shared/api/client';
+import { BindScreenForm } from '@/features/bind-screen/ui/BindScreenForm'; // <-- Импортируем новую фичу
 
 export const AdminPage = () => {
   const queryClient = useQueryClient();
 
-  // Запрашиваем данные текущего пользователя (и его тенанта)
   const { data: userData } = useQuery({
     queryKey: ['me'],
     queryFn: fetchMe,
@@ -24,22 +24,26 @@ export const AdminPage = () => {
   };
 
   return (
-      <Container size="lg" py="xl">
-        <Group justify="space-between" mb="xl">
-          <Title order={1}>Управление видео</Title>
-          
-          {/* Выводим название тенанта, если данные загрузились */}
-          {userData?.user && (
-            <Text size="md" c="dimmed">
-              Клиент: <Text span fw={700} c="blue">{userData.user.tenantName}</Text>
-            </Text>
-          )}
-        </Group>
-        
-        <Stack gap="xl">
-          <UploadButton onSuccess={handleUploadSuccess} />
-          <VideoList />
-        </Stack>
-      </Container>
+    <Container size="lg" py="xl">
+      <Group justify="space-between" mb="xl">
+        <Title order={1}>Панель управления</Title>
+        {userData?.user && (
+          <Text size="md" c="dimmed">
+            Клиент: <Text span fw={700} c="blue">{userData.user.tenantName}</Text>
+          </Text>
+        )}
+      </Group>
+      
+      <Stack gap="xl">
+        {/* Привязка экрана вынесена в отдельный компонент */}
+        <BindScreenForm />
+
+        {/* Загрузка видео */}
+        <UploadButton onSuccess={handleUploadSuccess} />
+
+        {/* Список видео */}
+        <VideoList />
+      </Stack>
+    </Container>
   );
 };
