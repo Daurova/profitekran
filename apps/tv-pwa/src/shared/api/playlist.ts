@@ -1,4 +1,4 @@
-import { ContentItem } from '../../pages/home/HomePage';
+import { type ContentItem } from '../../pages/home/HomePage';
 
 export const fetchPlaylist = async (deviceId: string): Promise<{ status: string; data?: ContentItem[]; error?: string }> => {
   const controller = new AbortController();
