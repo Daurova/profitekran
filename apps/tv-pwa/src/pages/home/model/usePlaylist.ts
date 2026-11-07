@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchPlaylist } from '../../../shared/api/playlist';
 import { getDeviceId } from '../../../shared/lib/device';
-import { type ContentItem } from '../HomePage';
+import { ContentItem } from '../HomePage';
 
 export const usePlaylist = () => {
   const [videos, setVideos] = useState<ContentItem[]>([]);
@@ -13,6 +13,7 @@ export const usePlaylist = () => {
       const deviceId = getDeviceId();
       const data = await fetchPlaylist(deviceId);
 
+      // Если сервер вернул 403
       if (data.status === 'unauthorized') {
         setIsUnauthorized(true);
         setIsLoading(false);
@@ -23,7 +24,6 @@ export const usePlaylist = () => {
         setIsUnauthorized(false);
         setVideos(data.data);
         
-        // Кэшируем
         localStorage.setItem('cached_playlist', JSON.stringify(data.data));
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
           navigator.serviceWorker.controller.postMessage({
@@ -35,10 +35,22 @@ export const usePlaylist = () => {
         return true;
       }
     } catch (err) {
+      // Если произошла ошибка сети, пробуем взять кэш
       const cached = localStorage.getItem('cached_playlist');
-      if (cached) setVideos(JSON.parse(cached));
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.length > 0) {
+          setVideos(parsed);
+        } else {
+          // Если кэш пустой — показываем экран активации
+          setIsUnauthorized(true);
+        }
+      } else {
+        // Если кэша нет вообще — показываем экран активации
+        setIsUnauthorized(true);
+      }
       setIsLoading(false);
-      return true;
+      return false;
     }
     return false;
   };
