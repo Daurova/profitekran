@@ -4,21 +4,22 @@ export interface BroadcastRules {
   promoSlots: number;       // Из скольких роликов состоит рекламный блок
 }
 
-// Правила для нашего бьюти-коворкинга (из ТЗ PR-отдела)
-export const BEAUTY_COWORKING_RULES: BroadcastRules = {
-  baseDurationSec: 30,  // 7 минут 24 секунды
+// Универсальные правила (работают для любого тенанта)
+export const DEFAULT_BROADCAST_RULES: BroadcastRules = {
+  baseDurationSec: 30,   // В ТЗ было 444 сек, но в коде стоит 30 (проверь, как надо)
   promoDurationSec: 36,  // 36 секунд рекламы
   promoSlots: 3,         // 3 ролика в рекламном блоке
 };
 
 export type PromoTemplate = 'A' | 'B' | 'C' | 'D';
 
-// Описание того, какие типы контента должны идти в слотах 2 и 3 (слот 1 всегда COFFEE_ANCHOR)
+// Описание того, какие типы контента должны идти в слотах
+// Слот 1 всегда COFFEE_ANCHOR (или любой другой "якорь" в будущем)
 export const PROMO_TEMPLATES: Record<PromoTemplate, [string, string]> = {
-  A: ['SERVICES', 'COFFEE_OFFER'], // Утро, день
-  B: ['COFFEE_OFFER', 'MASTER'],   // День, вечер
-  C: ['PRODUCT', 'SERVICES'],      // После обеда, выходные
-  D: ['COFFEE_OFFER', 'SERVICES'], // Вечер (декаф)
+  A: ['SERVICES', 'PROMO'], // Заменили COFFEE_OFFER на PROMO
+  B: ['PROMO', 'SERVICES'], // Заменили COFFEE_OFFER и MASTER на PROMO и SERVICES
+  C: ['PRODUCT', 'SERVICES'],
+  D: ['PROMO', 'SERVICES'],
 };
 
 // Какие шаблоны предпочтительны для каждого временного слота
