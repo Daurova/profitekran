@@ -203,4 +203,27 @@ export async function playlistRoutes(app: FastifyInstance) {
       return reply.status(500).send({ error: 'Ошибка получения списка экранов' });
     }
   });
+    // 8. Удаление экрана (ЗАЩИЩЕНО)
+  app.delete('/screens/:id', { preHandler: authPreHandler }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const tenantId = (request as any).user.tenantId;
+
+      // Ищем экран, принадлежащий этому тенанту
+      const screen = await prisma.screen.findFirst({
+        where: { id, tenantId },
+      });
+
+      if (!screen) {
+        return reply.status(404).send({ error: 'Экран не найден или не принадлежит вам' });
+      }
+
+      await prisma.screen.delete({ where: { id } });
+
+      return { status: 'success', message: 'Экран удален' };
+    } catch (error) {
+      app.log.error(error);
+      return reply.status(500).send({ error: 'Ошибка удаления экрана' });
+    }
+  });
 }

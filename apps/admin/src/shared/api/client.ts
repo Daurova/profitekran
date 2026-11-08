@@ -114,3 +114,13 @@ export const fetchScreens = async (): Promise<{ status: string; data: ScreenFrom
   if (!res.ok) throw new Error('Ошибка загрузки экранов');
   return res.json();
 };
+
+export const deleteScreenById = async (id: string) => {
+  const res = await fetch(`${API_URL}/screens/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Ошибка удаления экрана');
+  return res.json();
+};

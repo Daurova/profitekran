@@ -1,9 +1,9 @@
-import { Card, Table, Text, Badge, Group, Loader, Center, Button } from '@mantine/core';
-import { IconRefresh, IconDeviceTv } from '@tabler/icons-react';
+import { Card, Table, Text, Badge, Group, Loader, Center, Button, ActionIcon } from '@mantine/core';
+import { IconRefresh, IconDeviceTv, IconTrash } from '@tabler/icons-react';
 import { useScreenList } from '../model/useScreenList';
 
 export const ScreenList = () => {
-  const { screens, isLoading, refetch } = useScreenList();
+  const { screens, isLoading, refetch, handleDelete } = useScreenList();
 
   if (isLoading) return <Center h={100}><Loader /></Center>;
 
@@ -25,6 +25,7 @@ export const ScreenList = () => {
               <Table.Th>Название</Table.Th>
               <Table.Th>Код устройства</Table.Th>
               <Table.Th>Статус</Table.Th>
+              <Table.Th w={80}>Действия</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -43,6 +44,11 @@ export const ScreenList = () => {
                   <Badge color={screen.isActive ? 'green' : 'red'}>
                     {screen.isActive ? 'Активен' : 'Отключен'}
                   </Badge>
+                </Table.Td>
+                <Table.Td>
+                  <ActionIcon color="red" variant="subtle" onClick={() => handleDelete(screen.id)}>
+                    <IconTrash size={18} />
+                  </ActionIcon>
                 </Table.Td>
               </Table.Tr>
             ))}
