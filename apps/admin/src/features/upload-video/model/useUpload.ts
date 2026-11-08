@@ -4,10 +4,11 @@ import { uploadVideoToS3, addVideoToDb } from '@/shared/api/client';
 interface UploadParams {
   file: File;
   type: string;
-  orientation: 'HORIZONTAL' | 'VERTICAL'; // <-- Строгий тип
+  orientation: 'HORIZONTAL' | 'VERTICAL';
   maxPerHour?: number;
   cooldownMin?: number;
   requiresConsent?: boolean;
+  dayparts?: string[]; // <-- ДОБАВИЛИ
 }
 
 const MAX_FILE_SIZE_MB = 100;
@@ -49,6 +50,7 @@ export const useUpload = (onSuccess: () => void) => {
         maxPerHour: params.maxPerHour,
         cooldownMin: params.cooldownMin,
         requiresConsent: params.requiresConsent,
+        dayparts: params.dayparts, // <-- ПЕРЕДАЕМ
       });
 
       setProgress(100);

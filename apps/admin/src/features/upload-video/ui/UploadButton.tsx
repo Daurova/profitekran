@@ -1,12 +1,10 @@
-import { useState, useRef } from 'react';
 import { 
   Stack, Progress, Alert, FileInput, Select, NumberInput, 
-  Switch, Card, Title, Button, SegmentedControl 
+  Switch, Card, Title, Button, SegmentedControl, MultiSelect 
 } from '@mantine/core';
 import { IconAlertCircle, IconUpload } from '@tabler/icons-react';
-import { useUpload } from '../model/useUpload';
+import { useUploadForm } from '../model/useUploadForm';
 
-// Константы (Big Tech Way: выносим магические строки)
 const ORIENTATIONS = [
   { label: 'Горизонтальное (ТВ)', value: 'HORIZONTAL' },
   { label: 'Вертикальное (Reels)', value: 'VERTICAL' },
@@ -22,45 +20,16 @@ const PROMO_SUBTYPES = [
   { value: 'anchor', label: 'Короткая заставка' },
 ];
 
+const DAYPART_OPTIONS = [
+  { value: '09-11', label: 'Утро (09:00 - 11:00)' },
+  { value: '11-14', label: 'День (11:00 - 14:00)' },
+  { value: '14-17', label: 'После обеда (14:00 - 17:00)' },
+  { value: '17-20', label: 'Вечер (17:00 - 20:00)' },
+  { value: '20-22', label: 'Поздний вечер (20:00 - 22:00)' },
+];
+
 export const UploadButton = ({ onSuccess }: { onSuccess: () => void }) => {
-  // Исправленный тип для ref
-  const resetRef = useRef<(() => void) | null>(null);
-
-  const [file, setFile] = useState<File | null>(null);
-  const [contentMode, setContentMode] = useState<'base' | 'promo'>('base'); 
-  const [promoSubtype, setPromoSubtype] = useState<string>('promo_standard');
-  const [orientation, setOrientation] = useState<'HORIZONTAL' | 'VERTICAL'>('HORIZONTAL');
-  const [maxPerHour, setMaxPerHour] = useState<number | string>('');
-  const [cooldownMin, setCooldownMin] = useState<number | string>('');
-  const [requiresConsent, setRequiresConsent] = useState(false);
-
-  const { upload, isUploading, progress, error } = useUpload(() => {
-    resetRef.current?.();
-    setFile(null);
-    setMaxPerHour('');
-    setCooldownMin('');
-    setRequiresConsent(false);
-    setOrientation('HORIZONTAL');
-    onSuccess();
-  });
-
-  const handleUpload = () => {
-    if (!file) return;
-
-    let finalType = 'BASE';
-    if (contentMode === 'promo') {
-      finalType = promoSubtype === 'anchor' ? 'COFFEE_ANCHOR' : 'PROMO';
-    }
-
-    upload({
-      file,
-      type: finalType,
-      orientation,
-      maxPerHour: maxPerHour ? Number(maxPerHour) : undefined,
-      cooldownMin: cooldownMin ? Number(cooldownMin) : undefined,
-      requiresConsent,
-    });
-  };
+  const form = useUploadForm(onSuccess);
 
   return (
     <Card withBorder p="xl">
@@ -68,68 +37,80 @@ export const UploadButton = ({ onSuccess }: { onSuccess: () => void }) => {
         <Title order={3}>Загрузка нового видео</Title>
 
         <FileInput
-          resetRef={resetRef}
+          resetRef={form.resetRef}
           label="Видеофайл"
           placeholder="Нажмите, чтобы выбрать"
           accept="video/*"
           leftSection={<IconUpload size={20} />}
-          value={file}
-          onChange={setFile}
+          value={form.file}
+          onChange={form.setFile}
           size="lg"
-          disabled={isUploading}
+          disabled={form.isUploading}
         />
 
         <SegmentedControl
           fullWidth
           size="lg"
-          value={orientation}
-          onChange={(val) => setOrientation(val as 'HORIZONTAL' | 'VERTICAL')}
+          value={form.orientation}
+          onChange={(val) => form.setOrientation(val as 'HORIZONTAL' | 'VERTICAL')}
           data={ORIENTATIONS}
-          disabled={isUploading}
+          disabled={form.isUploading}
         />
 
         <SegmentedControl
           fullWidth
           size="lg"
-          value={contentMode}
-          onChange={(val) => setContentMode(val as 'base' | 'promo')}
+          value={form.contentMode}
+          onChange={(val) => form.setContentMode(val as 'base' | 'promo')}
           data={CONTENT_MODES}
-          disabled={isUploading}
+          disabled={form.isUploading}
         />
 
-        {contentMode === 'promo' && (
+        <MultiSelect
+          label="Время показа (Dayparts)"
+          description="В какие часы крутить это видео?"
+          data={DAYPART_OPTIONS}
+          value={form.dayparts}
+          onChange={form.setDayparts}
+          size="lg"
+          disabled={form.isUploading}
+          placeholder="Выберите время"
+          clearable
+        />
+
+        {form.contentMode === 'promo' && (
           <>
             <Select
               label="Тип рекламы"
-              value={promoSubtype}
-              onChange={(val) => setPromoSubtype(val || 'promo_standard')}
+              value={form.promoSubtype}
+              onChange={(val) => form.setPromoSubtype(val || 'promo_standard')}
               data={PROMO_SUBTYPES}
               size="lg"
-              disabled={isUploading}
+              disabled={form.isUploading}
             />
             
-            {promoSubtype !== 'anchor' && (
+            {form.promoSubtype !== 'anchor' && (
               <>
                 <NumberInput
                   label="Максимум показов в час"
-                  value={maxPerHour}
-                  onChange={setMaxPerHour}
+                  value={form.maxPerHour}
+                  onChange={form.setMaxPerHour}
                   size="lg"
-                  disabled={isUploading}
+                  disabled={form.isUploading}
                 />
                 <NumberInput
                   label="Кулдаун (минуты)"
-                  value={cooldownMin}
-                  onChange={setCooldownMin}
+                  value={form.cooldownMin}
+                  onChange={form.setCooldownMin}
                   size="lg"
-                  disabled={isUploading}
+                  disabled={form.isUploading}
                 />
                 <Switch
                   label="Это реклама сотрудника (нужно согласие)"
-                  checked={requiresConsent}
-                  onChange={(e) => setRequiresConsent(e.currentTarget.checked)}
+                  checked={form.requiresConsent}
+                  onChange={(e) => form.setRequiresConsent(e.currentTarget.checked)}
                   size="lg"
-                  disabled={isUploading}
+                  disabled={form.isUploading}
                 />
               </>
             )}
@@ -138,18 +119,18 @@ export const UploadButton = ({ onSuccess }: { onSuccess: () => void }) => {
 
         <Button
           size="lg"
-          onClick={handleUpload}
-          loading={isUploading}
-          disabled={!file || isUploading}
+          onClick={form.handleUpload}
+          loading={form.isUploading}
+          disabled={!form.file || form.isUploading}
         >
           Загрузить видео
         </Button>
 
-        {isUploading && <Progress value={progress} animated />}
+        {form.isUploading && <Progress value={form.progress} animated />}
 
-        {error && (
+        {form.error && (
           <Alert icon={<IconAlertCircle size={16} />} color="red">
-            {error}
+            {form.error}
           </Alert>
         )}
       </Stack>

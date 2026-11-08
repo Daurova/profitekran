@@ -30,8 +30,8 @@ export const VideoList = () => {
           <Table.Thead>
             <Table.Tr>
               <Table.Th>Тип</Table.Th>
-              <Table.Th>Формат</Table.Th> {/* <-- НОВАЯ КОЛОНКА */}
-              <Table.Th>Ссылка</Table.Th>
+              <Table.Th>Формат</Table.Th>
+              <Table.Th>Время</Table.Th> {/* <-- НОВАЯ КОЛОНКА */}
               <Table.Th>Длительность</Table.Th>
               <Table.Th w={80}>Действия</Table.Th>
             </Table.Tr>
@@ -42,8 +42,7 @@ export const VideoList = () => {
                 <Table.Td>
                   <Text fw={500}>{video.type}</Text>
                 </Table.Td>
-                                <Table.Td>
-                  {/* Устойчивая проверка к регистру */}
+                <Table.Td>
                   <Badge 
                     color={video.orientation?.toUpperCase() === 'HORIZONTAL' ? 'blue' : 'grape'} 
                     variant="light"
@@ -57,8 +56,8 @@ export const VideoList = () => {
                   </Badge>
                 </Table.Td>
                 <Table.Td>
-                  <Text size="xs" c="dimmed" lineClamp={1} style={{ maxWidth: 300 }}>
-                    {video.url}
+                  <Text size="xs" c="dimmed">
+                    {video.dayparts.length === 5 ? 'Всегда' : video.dayparts.join(', ')}
                   </Text>
                 </Table.Td>
                 <Table.Td>{video.durationSec} сек.</Table.Td>
