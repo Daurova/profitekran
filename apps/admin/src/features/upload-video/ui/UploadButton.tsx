@@ -1,6 +1,6 @@
 import { 
   Stack, Progress, Alert, FileInput, Select, NumberInput, 
-  Switch, Card, Title, Button, SegmentedControl, Chip, Input, Group 
+  Switch, Card, Title, Button, SegmentedControl, Chip, Input, Group, Box 
 } from '@mantine/core';
 import { IconAlertCircle, IconUpload } from '@tabler/icons-react';
 import { useUploadForm } from '../model/useUploadForm';
@@ -71,26 +71,27 @@ export const UploadButton = ({ onSuccess }: { onSuccess: () => void }) => {
           label="Время показа"
           description="В какие часы крутить это видео?"
         >
-          <Chip.Group 
-            multiple 
-            value={form.dayparts} 
-            onChange={form.setDayparts} 
-            mt="xs"
-          >
-            <Group gap="xs">
-              {DAYPART_OPTIONS.map((option) => (
-                <Chip 
-                  key={option.value} 
-                  value={option.value} 
-                  variant="light" 
-                  size="md"
-                  disabled={form.isUploading}
-                >
-                  {option.label}
-                </Chip>
-              ))}
-            </Group>
-          </Chip.Group>
+          <Box mt="xs">
+            <Chip.Group 
+              multiple 
+              value={form.dayparts} 
+              onChange={form.setDayparts} 
+            >
+              <Group gap="xs">
+                {DAYPART_OPTIONS.map((option) => (
+                  <Chip 
+                    key={option.value} 
+                    value={option.value} 
+                    variant="light" 
+                    size="md"
+                    disabled={form.isUploading}
+                  >
+                    {option.label}
+                  </Chip>
+                ))}
+              </Group>
+            </Chip.Group>
+          </Box>
         </Input.Wrapper>
 
         {form.contentMode === 'promo' && (
