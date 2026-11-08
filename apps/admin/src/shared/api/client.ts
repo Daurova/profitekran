@@ -53,10 +53,11 @@ export const addVideoToDb = async (data: {
   key: string;
   type: string;
   durationSec: number;
-  orientation: 'HORIZONTAL' | 'VERTICAL'; // <-- Строгий тип
+  orientation: 'HORIZONTAL' | 'VERTICAL';
   maxPerHour?: number;
   cooldownMin?: number;
   requiresConsent?: boolean;
+  dayparts?: string[]; // <-- ДОБАВЛЕНО
 }) => {
   const res = await fetch(`${API_URL}/add-video`, {
     method: 'POST',

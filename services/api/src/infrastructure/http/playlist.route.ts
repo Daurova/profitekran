@@ -89,10 +89,11 @@ export async function playlistRoutes(app: FastifyInstance) {
   });
 
   // 3. Добавление записи в базу (ЗАЩИЩЕНО)
+    // 3. Добавление записи в базу (ЗАЩИЩЕНО)
   app.post('/add-video', { preHandler: authPreHandler }, async (request, reply) => {
     try {
       const { 
-        key, type, durationSec, orientation, maxPerHour, cooldownMin, requiresConsent 
+        key, type, durationSec, orientation, maxPerHour, cooldownMin, requiresConsent, dayparts 
       } = request.body as { 
         key: string, 
         type: string, 
@@ -100,7 +101,8 @@ export async function playlistRoutes(app: FastifyInstance) {
         orientation?: Orientation,
         maxPerHour?: number, 
         cooldownMin?: number, 
-        requiresConsent?: boolean
+        requiresConsent?: boolean,
+        dayparts?: string[] // <-- ДОБАВИЛИ
       };
       
       if (!key || !type) return reply.status(400).send({ error: 'Нужны key и type' });
@@ -115,7 +117,10 @@ export async function playlistRoutes(app: FastifyInstance) {
           maxPerHour: maxPerHour ?? null,
           cooldownMin: cooldownMin ?? null,
           requiresConsent: requiresConsent || false,
-          dayparts: ['09-11', '11-14', '14-17', '17-20', '20-22'],
+          // Если dayparts пришли — берем их, иначе ставим "всегда"
+          dayparts: dayparts && dayparts.length > 0 
+            ? dayparts 
+            : ['09-11', '11-14', '14-17', '17-20', '20-22'],
           tenantId: (request as any).user.tenantId,
         },
       });
