@@ -1,6 +1,6 @@
 import { 
   Stack, Progress, Alert, FileInput, Select, NumberInput, 
-  Switch, Card, Title, Button, SegmentedControl, Checkbox, Input, Group 
+  Switch, Card, Title, Button, SegmentedControl, Chip, Input, Group 
 } from '@mantine/core';
 import { IconAlertCircle, IconUpload } from '@tabler/icons-react';
 import { useUploadForm } from '../model/useUploadForm';
@@ -23,9 +23,9 @@ const PROMO_SUBTYPES = [
 const DAYPART_OPTIONS = [
   { value: '09-11', label: 'Утро (09-11)' },
   { value: '11-14', label: 'День (11-14)' },
-  { value: '14-17', label: 'После обеда (14-17)' },
+  { value: '14-17', label: 'Обед (14-17)' },
   { value: '17-20', label: 'Вечер (17-20)' },
-  { value: '20-22', label: 'Поздний вечер (20-22)' },
+  { value: '20-22', label: 'Ночь (20-22)' },
 ];
 
 export const UploadButton = ({ onSuccess }: { onSuccess: () => void }) => {
@@ -66,27 +66,31 @@ export const UploadButton = ({ onSuccess }: { onSuccess: () => void }) => {
           disabled={form.isUploading}
         />
 
-        {/* ЧЕКБОКСЫ ДЛЯ ВЫБОРА ВРЕМЕНИ */}
+        {/* КНОПКИ-ТАБЛЕТКИ ДЛЯ ВЫБОРА ВРЕМЕНИ */}
         <Input.Wrapper
           label="Время показа"
           description="В какие часы крутить это видео?"
         >
-          <Checkbox.Group
-            value={form.dayparts}
-            onChange={form.setDayparts}
+          <Chip.Group 
+            multiple 
+            value={form.dayparts} 
+            onChange={form.setDayparts} 
             mt="xs"
           >
-            <Group gap="md">
+            <Group gap="xs">
               {DAYPART_OPTIONS.map((option) => (
-                <Checkbox
-                  key={option.value}
-                  value={option.value}
-                  label={option.label}
+                <Chip 
+                  key={option.value} 
+                  value={option.value} 
+                  variant="light" 
+                  size="md"
                   disabled={form.isUploading}
-                />
+                >
+                  {option.label}
+                </Chip>
               ))}
             </Group>
-          </Checkbox.Group>
+          </Chip.Group>
         </Input.Wrapper>
 
         {form.contentMode === 'promo' && (
