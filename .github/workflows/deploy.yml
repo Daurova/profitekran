@@ -50,7 +50,8 @@ jobs:
             EOF
 
             # 2. Обновляем код
-            git pull origin main
+            git fetch --all
+            git reset --hard origin/main
             
             # 3. Пересобираем PWA (телевизор)
             cd apps/tv-pwa
