@@ -190,4 +190,17 @@ export async function playlistRoutes(app: FastifyInstance) {
       return reply.status(500).send({ error: 'Ошибка добавления экрана' });
     }
   });
+    // 7. Получение списка экранов (ЗАЩИЩЕНО)
+  app.get('/screens', { preHandler: authPreHandler }, async (request, reply) => {
+    try {
+      const screens = await prisma.screen.findMany({
+        where: { tenantId: (request as any).user.tenantId },
+        orderBy: { name: 'asc' },
+      });
+      return { status: 'success', data: screens };
+    } catch (error) {
+      app.log.error(error);
+      return reply.status(500).send({ error: 'Ошибка получения списка экранов' });
+    }
+  });
 }

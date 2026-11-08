@@ -8,6 +8,7 @@ import { BindScreenForm } from '@/features/bind-screen/ui/BindScreenForm'; // <-
 import { useNavigate } from 'react-router-dom';
 import { logout } from '@/shared/api/client';
 import { IconLogout } from '@tabler/icons-react';
+import { ScreenList } from '@/widgets/screen-list/ui/ScreenList';
 
 
 export const AdminPage = () => {
@@ -50,6 +51,7 @@ export const AdminPage = () => {
       <Stack gap="xl">
         {/* Привязка экрана вынесена в отдельный компонент */}
         <BindScreenForm />
+        <ScreenList /> {/* <-- ДОБАВЛЯЕМ СЮДА */}
 
         {/* Загрузка видео */}
         <UploadButton onSuccess={handleUploadSuccess} />

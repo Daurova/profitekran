@@ -13,6 +13,14 @@ export interface VideoFromDb {
   createdAt: string;
 }
 
+export interface ScreenFromDb {
+  id: string;
+  name: string;
+  deviceId: string;
+  isActive: boolean;
+  tenantId: string;
+}
+
 const API_URL = import.meta.env.VITE_API_URL || 'https://profitekran.online/api';
 
 const getAuthHeaders = () => new Headers();
@@ -96,4 +104,13 @@ export const logout = async () => {
     method: 'POST',
     credentials: 'include',
   });
+};
+
+export const fetchScreens = async (): Promise<{ status: string; data: ScreenFromDb[] }> => {
+  const res = await fetch(`${API_URL}/screens`, {
+    headers: getAuthHeaders(),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Ошибка загрузки экранов');
+  return res.json();
 };

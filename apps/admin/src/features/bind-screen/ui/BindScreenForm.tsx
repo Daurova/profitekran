@@ -3,12 +3,14 @@ import { TextInput, Button, Card, Alert, Title, Text, Stack } from '@mantine/cor
 import { IconAlertCircle, IconDeviceTv } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { addScreen } from '@/shared/api/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const BindScreenForm = () => {
   const [deviceId, setDeviceId] = useState('');
   const [screenName, setScreenName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const handleAddScreen = async () => {
     if (!deviceId || !screenName) return;
@@ -24,6 +26,7 @@ export const BindScreenForm = () => {
       });
       setDeviceId('');
       setScreenName('');
+      queryClient.invalidateQueries({ queryKey: ['screens'] });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка привязки экрана');
     } finally {

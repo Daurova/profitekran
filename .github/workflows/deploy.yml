@@ -69,6 +69,8 @@ jobs:
             # 5. Перезапускаем Docker. Флаг --build заставит Docker пересобрать образ API с новыми миграциями!
             cd ../..
             docker compose -f docker-compose.prod.yml up -d --build
+            # Перечитываем конфиг Nginx (без простоя)
+            docker exec profitekran-nginx-1 nginx -s reload
             
             # 6. Ждем API и применяем миграции
             echo "Waiting for API..."
