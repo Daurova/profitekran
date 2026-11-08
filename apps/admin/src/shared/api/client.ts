@@ -90,3 +90,10 @@ export const addScreen = async (deviceId: string, name: string) => {
   if (!res.ok) throw new Error('Ошибка добавления экрана');
   return res.json();
 };
+
+export const logout = async () => {
+  await fetch(`${API_URL}/auth/logout`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+};

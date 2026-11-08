@@ -25,7 +25,7 @@ const authPreHandler = async (request: any, reply: any) => {
     }
   };
 
-  
+
 export async function authRoutes(app: FastifyInstance) {
   const authService = new AuthService();
 
@@ -122,5 +122,11 @@ export async function authRoutes(app: FastifyInstance) {
       app.log.error(error);
       return reply.status(500).send({ error: 'Ошибка обновления названия' });
     }
+  });
+
+    // 5. Выход из аккаунта
+  app.post('/auth/logout', async (request, reply) => {
+    reply.clearCookie('auth_token', { path: '/' });
+    return { status: 'success', message: 'Выход выполнен' };
   });
 }

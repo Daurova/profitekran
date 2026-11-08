@@ -1,10 +1,14 @@
-import { Container, Title, Stack, Group, Text } from '@mantine/core';
+import { Container, Title, Stack, Group, Text, Button } from '@mantine/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { VideoList } from '@/widgets/video-list/ui/VideoList';
 import { notifications } from '@mantine/notifications';
 import { UploadButton } from '@/features/upload-video/ui/UploadButton';
 import { fetchMe } from '@/shared/api/client';
 import { BindScreenForm } from '@/features/bind-screen/ui/BindScreenForm'; // <-- Импортируем новую фичу
+import { useNavigate } from 'react-router-dom';
+import { logout } from '@/shared/api/client';
+import { IconLogout } from '@tabler/icons-react';
+
 
 export const AdminPage = () => {
   const queryClient = useQueryClient();
@@ -22,6 +26,12 @@ export const AdminPage = () => {
     });
     queryClient.invalidateQueries({ queryKey: ['videos'] });
   };
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   return (
     <Container size="lg" py="xl">
@@ -32,6 +42,9 @@ export const AdminPage = () => {
             Клиент: <Text span fw={700} c="blue">{userData.user.tenantName}</Text>
           </Text>
         )}
+        <Button variant="light" color="red" leftSection={<IconLogout size={16} />} onClick={handleLogout}>
+            Выйти
+        </Button>
       </Group>
       
       <Stack gap="xl">
