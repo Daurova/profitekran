@@ -6,7 +6,8 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://profitekran.online/api'
 export const useAuth = () => {
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
-  const [step, setStep] = useState<'phone' | 'code'>('phone');
+  const [companyName, setCompanyName] = useState(''); // <-- Для онбординга
+  const [step, setStep] = useState<'phone' | 'code' | 'onboarding'>('phone'); // <-- Добавили шаг
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -40,7 +41,7 @@ export const useAuth = () => {
     setIsLoading(true);
     setError(null);
 
-        try {
+    try {
       const res = await fetch(`${API_URL}/auth/verify-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,9 +52,36 @@ export const useAuth = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка входа');
 
-      navigate('/'); // <-- Идем на корень (это и есть /admin)
+      // Если новый пользователь — показываем онбординг
+      if (data.isNewUser) {
+        setStep('onboarding');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Неверный код');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveCompanyName = async () => {
+    if (!companyName) return;
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`${API_URL}/tenant/name`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: companyName }),
+        credentials: 'include',
+      });
+
+      if (!res.ok) throw new Error('Ошибка сохранения');
+      navigate('/');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось сохранить название');
     } finally {
       setIsLoading(false);
     }
@@ -62,10 +90,12 @@ export const useAuth = () => {
   return {
     phone, setPhone,
     code, setCode,
+    companyName, setCompanyName,
     step, setStep,
     error,
     isLoading,
     sendCode,
     verifyCode,
+    saveCompanyName,
   };
 };

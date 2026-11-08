@@ -1,26 +1,30 @@
 import { TextInput, Button, Stack, Paper, Title, Alert } from '@mantine/core';
-import { IconPhone, IconKey, IconAlertCircle } from '@tabler/icons-react';
+import { IconPhone, IconKey, IconAlertCircle, IconBuildingStore } from '@tabler/icons-react';
 import { useAuth } from '../model/useAuth';
 
 export const AuthPage = () => {
   const {
     phone, setPhone,
     code, setCode,
+    companyName, setCompanyName,
     step, setStep,
     error,
     isLoading,
     sendCode,
     verifyCode,
+    saveCompanyName,
   } = useAuth();
 
   return (
     <Paper p="xl" radius="md" withBorder style={{ maxWidth: 400, margin: '100px auto' }}>
       <Stack gap="md">
         <Title order={2} ta="center">
-          {step === 'phone' ? 'Вход в Админку' : 'Введите код из СМС'}
+          {step === 'phone' && 'Вход в Админку'}
+          {step === 'code' && 'Введите код из СМС'}
+          {step === 'onboarding' && 'Название компании'}
         </Title>
 
-        {step === 'phone' ? (
+        {step === 'phone' && (
           <>
             <TextInput
               label="Номер телефона"
@@ -34,7 +38,9 @@ export const AuthPage = () => {
               Получить код
             </Button>
           </>
-        ) : (
+        )}
+
+        {step === 'code' && (
           <>
             <TextInput
               label="Код из СМС"
@@ -49,6 +55,22 @@ export const AuthPage = () => {
             </Button>
             <Button variant="subtle" size="xs" onClick={() => setStep('phone')}>
               Изменить номер
+            </Button>
+          </>
+        )}
+
+        {step === 'onboarding' && (
+          <>
+            <TextInput
+              label="Как называется ваша компания?"
+              placeholder="Например: Кофейня 'Вдохновение'"
+              leftSection={<IconBuildingStore size={16} />}
+              value={companyName}
+              onChange={(e) => setCompanyName(e.currentTarget.value)}
+              size="lg"
+            />
+            <Button size="lg" fullWidth onClick={saveCompanyName} loading={isLoading}>
+              Продолжить
             </Button>
           </>
         )}

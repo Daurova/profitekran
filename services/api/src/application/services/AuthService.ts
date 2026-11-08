@@ -6,27 +6,32 @@ const JWT_SECRET = process.env['JWT_SECRET'] || 'super-secret-key-for-dev';
 
 export class AuthService {
   // 1. Отправить код на телефон
+    // 1. Отправить код на телефон
   async sendCode(phone: string): Promise<void> {
     const code = Math.floor(1000 + Math.random() * 9000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    const user = await prisma.user.findUnique({ where: { phone } });
+    let user = await prisma.user.findUnique({ where: { phone } });
 
     if (!user) {
-      // Ищем дефолтного тенанта (первого в базе)
-      const defaultTenant = await prisma.tenant.findFirst();
-      if (!defaultTenant) throw new Error('В базе нет ни одного клиента (тенанта)');
+      // SELF-SERVICE: Если пользователя нет, создаем нового ТЕНАНТА и привязываем юзера к нему
+      const newTenant = await prisma.tenant.create({
+        data: {
+          name: `Клиент ${phone}`, // Временное название, потом можно будет изменить в настройках
+          isActive: true,
+        },
+      });
 
-      await prisma.user.create({
+      user = await prisma.user.create({
         data: {
           phone,
           otpCode: code,
           otpExpiresAt: expiresAt,
-          tenantId: defaultTenant.id,
+          tenantId: newTenant.id, // Привязываем к НОВОМУ тенанту
         },
       });
     } else {
-      // Сбрасываем старый код и обновляем новый
+      // Если пользователь уже есть, просто обновляем код
       await prisma.user.update({
         where: { id: user.id },
         data: { otpCode: code, otpExpiresAt: expiresAt },
@@ -35,9 +40,9 @@ export class AuthService {
 
     await sendSmsCode(phone, code);
   }
-
   // 2. Проверить код и выдать токен
-  async verifyCode(phone: string, code: string): Promise<string> {
+    // 2. Проверить код и выдать токен
+  async verifyCode(phone: string, code: string): Promise<{ token: string, isNewUser: boolean }> {
     const user = await prisma.user.findUnique({ where: { phone } });
 
     if (!user) throw new Error('Пользователь не найден');
@@ -46,20 +51,21 @@ export class AuthService {
       throw new Error('Код истек');
     }
 
-    // Big Tech Way: Транзакция (очистка кода и выдача токена)
-    const token = await prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: user.id },
-        data: { otpCode: null, otpExpiresAt: null },
-      });
-
-      return jwt.sign(
-        { userId: user.id, tenantId: user.tenantId, role: user.role },
-        JWT_SECRET,
-        { expiresIn: '7d' }
-      );
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { otpCode: null, otpExpiresAt: null },
     });
 
-    return token;
+    const token = jwt.sign(
+      { userId: user.id, tenantId: user.tenantId, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // Проверяем, новый ли это клиент (если название начинается с "Клиент ")
+    const tenant = await prisma.tenant.findUnique({ where: { id: user.tenantId } });
+    const isNewUser = tenant?.name.startsWith('Клиент ') ?? false;
+
+    return { token, isNewUser };
   }
 }
