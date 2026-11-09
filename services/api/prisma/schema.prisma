@@ -63,7 +63,7 @@ model Content {
   requiresConsent Boolean     @default(false)
   dayparts        String[]
   createdAt       DateTime    @default(now())
-  
+  actionUrl       String?     // Ссылка для QR-кода
   tenantId        String
   tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade) // <-- ДОБАВЛЕНО
 }
@@ -74,12 +74,10 @@ enum Orientation {
 }
 
 enum ContentType {
-  BASE
-  PROMO
-  COFFEE_ANCHOR
-  COFFEE_OFFER
-  SERVICES
-  MASTER
-  PRODUCT
-  PARTNER
+  BASE       // Атмосфера (фон)
+  ANCHOR     // Короткая заставка
+  PROMO      // Универсальная реклама
+  OFFER      // Спецпредложение (акция)
+  SERVICE    // Услуга/Сотрудник
 }
+

@@ -1,8 +1,8 @@
 import { 
   Stack, Progress, Alert, FileInput, Select, NumberInput, 
-  Switch, Card, Title, Button, SegmentedControl, Chip, Input, Group, Box 
+  Switch, Card, Title, Button, SegmentedControl, Chip, Input, Group, Box, TextInput 
 } from '@mantine/core';
-import { IconAlertCircle, IconUpload } from '@tabler/icons-react';
+import { IconAlertCircle, IconUpload, IconLink } from '@tabler/icons-react';
 import { useUploadForm } from '../model/useUploadForm';
 
 const ORIENTATIONS = [
@@ -10,14 +10,12 @@ const ORIENTATIONS = [
   { label: 'Вертикальное (Reels)', value: 'VERTICAL' },
 ];
 
-const CONTENT_MODES = [
-  { label: 'Основное видео', value: 'base' },
-  { label: 'Реклама', value: 'promo' },
-];
-
-const PROMO_SUBTYPES = [
-  { value: 'promo_standard', label: 'Обычная реклама' },
-  { value: 'anchor', label: 'Короткая заставка' },
+const CONTENT_TYPES = [
+  { value: 'BASE', label: 'Основное видео (атмосфера)' },
+  { value: 'ANCHOR', label: 'Короткая заставка' },
+  { value: 'PROMO', label: 'Универсальная реклама' },
+  { value: 'OFFER', label: 'Спецпредложение (акция)' },
+  { value: 'SERVICE', label: 'Услуга / Сотрудник' },
 ];
 
 const DAYPART_OPTIONS = [
@@ -57,12 +55,12 @@ export const UploadButton = ({ onSuccess }: { onSuccess: () => void }) => {
           disabled={form.isUploading}
         />
 
-        <SegmentedControl
-          fullWidth
+        <Select
+          label="Тип контента"
+          value={form.contentType}
+          onChange={(val) => form.setContentType(val || 'BASE')}
+          data={CONTENT_TYPES}
           size="lg"
-          value={form.contentMode}
-          onChange={(val) => form.setContentMode(val as 'base' | 'promo')}
-          data={CONTENT_MODES}
           disabled={form.isUploading}
         />
 
@@ -94,42 +92,44 @@ export const UploadButton = ({ onSuccess }: { onSuccess: () => void }) => {
           </Box>
         </Input.Wrapper>
 
-        {form.contentMode === 'promo' && (
+        {/* ССЫЛКА ДЛЯ QR-КОДА (для рекламы и услуг) */}
+        {(form.contentType === 'OFFER' || form.contentType === 'SERVICE') && (
+          <TextInput
+            label="Ссылка для QR-кода"
+            description="Куда вести клиента (запись, скидка)"
+            placeholder="https://..."
+            leftSection={<IconLink size={16} />}
+            value={form.actionUrl}
+            onChange={(e) => form.setActionUrl(e.currentTarget.value)}
+            size="lg"
+            disabled={form.isUploading}
+          />
+        )}
+
+        {/* НАСТРОЙКИ ЧАСТОТЫ (для рекламы) */}
+        {(form.contentType === 'OFFER' || form.contentType === 'SERVICE' || form.contentType === 'PROMO') && (
           <>
-            <Select
-              label="Тип рекламы"
-              value={form.promoSubtype}
-              onChange={(val) => form.setPromoSubtype(val || 'promo_standard')}
-              data={PROMO_SUBTYPES}
+            <NumberInput
+              label="Максимум показов в час"
+              value={form.maxPerHour}
+              onChange={form.setMaxPerHour}
               size="lg"
               disabled={form.isUploading}
             />
-            
-            {form.promoSubtype !== 'anchor' && (
-              <>
-                <NumberInput
-                  label="Максимум показов в час"
-                  value={form.maxPerHour}
-                  onChange={form.setMaxPerHour}
-                  size="lg"
-                  disabled={form.isUploading}
-                />
-                <NumberInput
-                  label="Кулдаун (минуты)"
-                  value={form.cooldownMin}
-                  onChange={form.setCooldownMin}
-                  size="lg"
-                  disabled={form.isUploading}
-                />
-                <Switch
-                  label="Это реклама сотрудника (нужно согласие)"
-                  checked={form.requiresConsent}
-                  onChange={(e) => form.setRequiresConsent(e.currentTarget.checked)}
-                  size="lg"
-                  disabled={form.isUploading}
-                />
-              </>
-            )}
+            <NumberInput
+              label="Кулдаун (минуты)"
+              value={form.cooldownMin}
+              onChange={form.setCooldownMin}
+              size="lg"
+              disabled={form.isUploading}
+            />
+            <Switch
+              label="Это реклама сотрудника (нужно согласие)"
+              checked={form.requiresConsent}
+              onChange={(e) => form.setRequiresConsent(e.currentTarget.checked)}
+              size="lg"
+              disabled={form.isUploading}
+            />
           </>
         )}
 

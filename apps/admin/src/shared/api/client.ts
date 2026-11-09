@@ -5,7 +5,8 @@ export interface VideoFromDb {
   url: string;
   durationSec: number;
   hasAudio: boolean;
-  orientation: 'HORIZONTAL' | 'VERTICAL'; // <-- Строгий тип
+  orientation: 'HORIZONTAL' | 'VERTICAL';
+  actionUrl: string | null; // <-- ДОБАВИЛИ
   maxPerHour: number | null;
   cooldownMin: number | null;
   requiresConsent: boolean;
@@ -54,10 +55,11 @@ export const addVideoToDb = async (data: {
   type: string;
   durationSec: number;
   orientation: 'HORIZONTAL' | 'VERTICAL';
+  actionUrl?: string; // <-- ДОБАВИЛИ
   maxPerHour?: number;
   cooldownMin?: number;
   requiresConsent?: boolean;
-  dayparts?: string[]; // <-- ДОБАВЛЕНО
+  dayparts?: string[];
 }) => {
   const res = await fetch(`${API_URL}/add-video`, {
     method: 'POST',

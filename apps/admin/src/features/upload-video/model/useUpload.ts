@@ -5,10 +5,11 @@ interface UploadParams {
   file: File;
   type: string;
   orientation: 'HORIZONTAL' | 'VERTICAL';
+  actionUrl?: string; // <-- ДОБАВИЛИ
   maxPerHour?: number;
   cooldownMin?: number;
   requiresConsent?: boolean;
-  dayparts?: string[]; // <-- ДОБАВИЛИ
+  dayparts?: string[];
 }
 
 const MAX_FILE_SIZE_MB = 100;
@@ -47,10 +48,11 @@ export const useUpload = (onSuccess: () => void) => {
         type: params.type,
         durationSec: uploadData.durationSec,
         orientation: params.orientation,
+        actionUrl: params.actionUrl, // <-- ПЕРЕДАЕМ
         maxPerHour: params.maxPerHour,
         cooldownMin: params.cooldownMin,
         requiresConsent: params.requiresConsent,
-        dayparts: params.dayparts, // <-- ПЕРЕДАЕМ
+        dayparts: params.dayparts,
       });
 
       setProgress(100);

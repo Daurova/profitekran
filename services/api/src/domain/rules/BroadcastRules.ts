@@ -16,10 +16,10 @@ export type PromoTemplate = 'A' | 'B' | 'C' | 'D';
 // Описание того, какие типы контента должны идти в слотах
 // Слот 1 всегда COFFEE_ANCHOR (или любой другой "якорь" в будущем)
 export const PROMO_TEMPLATES: Record<PromoTemplate, [string, string]> = {
-  A: ['SERVICES', 'PROMO'], // Заменили COFFEE_OFFER на PROMO
-  B: ['PROMO', 'SERVICES'], // Заменили COFFEE_OFFER и MASTER на PROMO и SERVICES
-  C: ['PRODUCT', 'SERVICES'],
-  D: ['PROMO', 'SERVICES'],
+  A: ['SERVICE', 'OFFER'], 
+  B: ['SERVICE', 'PROMO'],  
+  C: ['OFFER', 'SERVICE'], 
+  D: ['PROMO', 'SERVICE'],   
 };
 
 // Какие шаблоны предпочтительны для каждого временного слота

@@ -352,3 +352,83 @@ code src/pages/home/HomePage.tsx
 ---
 
 **Когда будешь готова начать переписывание на Vite, просто напиши «Погнали на Vite»**.
+
+Вот обновленный контекст с **четким указанием всех путей к файлам и папкам**. Теперь мы точно не перепутаем, где лежит админка, а где телевизор.
+
+---
+
+# 📦 МАКСИМАЛЬНО ПОДРОБНЫЙ КОНТЕКСТ ПРОЕКТА: «ВДОХНОВЕНИЕ» (TV PWA + API + Admin)
+
+## 🏗️ 1. СТРУКТУРА РЕПОЗИТОРИЯ (МОНОРЕПО)
+Все пути указаны относительно корневой папки проекта **`content/`**.
+
+*   **`content/apps/tv-pwa/`** — Приложение для телевизора (PWA). Раздается Nginx'ом в корень сайта (`https://profitekran.online/`).
+*   **`content/apps/admin/`** — Админка (Vite + React). Раздается Nginx'ом по пути `/admin/` (`https://profitekran.online/admin/`).
+*   **`content/services/api/`** — Бэкенд (Fastify + Prisma).
+*   **`content/docker-compose.prod.yml`** — Файл сборки контейнеров (в корне).
+*   **`content/nginx.conf`** — Конфиг Nginx (в корне).
+*   **`content/.github/workflows/deploy.yml`** — CI/CD пайплайн.
+
+## 🏗️ 2. ИНФРАСТРУКТУРА И ДЕПЛОЙ
+*   **Сервер:** Reg.ru (VPS), IP: `5.63.155.125`. Папка проекта на сервере: **`/var/www/profitekran`**.
+*   **Nginx:** Монтирует `apps/tv-pwa/dist` в корень `/usr/share/nginx/html` и `apps/admin/dist` в `/usr/share/nginx/html/admin`.
+*   **CI/CD:**
+    *   `git reset --hard origin/main` (сброс локальных правок).
+    *   `docker compose -f docker-compose.prod.yml up -d --build --force-recreate` (пересборка контейнеров).
+    *   `docker exec profitekran-nginx-1 nginx -s reload` (применение конфига).
+*   **Секреты (S3, JWT):** Передаются через GitHub Secrets и переменные окружения.
+
+## 💻 3. ТЕХНОЛОГИЧЕСКИЙ СТЕК
+*   **Фронтенд (TV PWA):** `apps/tv-pwa/` (React, Vite, Mantine, IndexedDB, `vite-plugin-pwa`).
+*   **Фронтенд (Admin):** `apps/admin/` (React, Vite, Mantine, `@tanstack/react-query`, FSD).
+*   **Бэкенд:** `services/api/` (Fastify, TypeScript, Prisma 7, `music-metadata`, `@aws-sdk/client-s3`).
+
+## 🏗️ 4. АРХИТЕКТУРА БЭКЕНДА (Clean Architecture)
+Все файлы внутри **`services/api/src/`**:
+*   **`domain/`** — Сущности (`ContentItem`), Интерфейсы (`IContentRepository`), Правила (`BroadcastRules`).
+*   **`application/`** — Юзкейсы (`GeneratePlaylistUseCase.ts`), Сервисы (`AuthService.ts`).
+*   **`infrastructure/http/`** — Роуты:
+    *   `auth.route.ts` (авторизация).
+    *   `playlist.route.ts` (плейлист, видео).
+    *   `screen.route.ts` (экраны).
+    *   `middlewares/authPreHandler.ts` (проверка JWT).
+*   **`infrastructure/repositories/PrismaContentRepository.ts`** — работа с БД.
+*   **`infrastructure/s3/S3Service.ts`** — работа с облаком.
+*   **`infrastructure/database/prisma.ts`** — синглтон Prisma.
+*   **`prisma/schema.prisma`** — схема БД. **`prisma/seed.ts`** — наполнение БД.
+
+## 🗄️ 5. СХЕМА БАЗЫ ДАННЫХ (Prisma)
+*   **`Tenant`:** `id`, `name`, `subscriptionEnd`, `isActive`.
+*   **`User`:** `id`, `phone`, `role`, `otpCode`, `otpExpiresAt`, `tenantId` (Cascade).
+*   **`Screen`:** `id`, `name`, `deviceId` (6-символьный код), `isActive`, `tenantId` (Cascade).
+*   **`Content`:** `id`, `type` (BASE, PROMO, **ANCHOR**, SERVICES, PRODUCT и т.д.), `url`, `durationSec`, `hasAudio`, `orientation` (HORIZONTAL/VERTICAL), `maxPerHour`, `cooldownMin`, `requiresConsent`, `dayparts` (String[]), `tenantId` (Cascade).
+
+## 🎯 6. ФУНКЦИОНАЛ
+### A. Телевизор (`apps/tv-pwa/`)
+*   **`src/pages/home/HomePage.tsx`** — главный экран.
+*   **`src/pages/home/model/usePlaylist.ts`** — логика запроса плейлиста и лонг-поллинга (каждые 3 сек при 403).
+*   **`src/shared/lib/device.ts`** — генерация `deviceId`.
+*   **`src/widgets/player/Player.tsx`** — плеер с IndexedDB и «Занавесом».
+
+### B. Админка (`apps/admin/`)
+*   **`src/screens/auth/ui/AuthPage.tsx`** — вход (телефон -> код -> онбординг).
+*   **`src/screens/admin/ui/AdminPage.tsx`** — сборка страницы (шапка с кнопкой «Выйти», список виджетов).
+*   **`src/features/bind-screen/ui/BindScreenForm.tsx`** — привязка ТВ по коду.
+*   **`src/features/upload-video/ui/UploadButton.tsx`** — форма загрузки (формат, `Chip.Group` для `dayparts`, настройки рекламы).
+*   **`src/widgets/video-list/ui/VideoList.tsx`** — таблица видео (бейджи формата, `dayparts`, кнопка удаления).
+*   **`src/widgets/screen-list/ui/ScreenList.tsx`** — таблица экранов (код, статус, удаление).
+*   **`src/shared/api/client.ts`** — все запросы к API.
+
+### C. Планировщик (`services/api/src/application/use-cases/GeneratePlaylistUseCase.ts`)
+*   Фильтрует по `tenantId` и `dayparts`.
+*   `canShow()` проверяет `cooldownMin` и `maxPerHour` для любого видео.
+*   Вставляет `ANCHOR` (заставку) в начало рекламного блока.
+
+## ⏭️ 7. СЛЕДУЮЩИЕ ШАГИ
+1.  **Универсальный якорь:** Заменить `COFFEE_ANCHOR` на `ANCHOR` во всей системе (БД, админка, планировщик).
+2.  **Универсализация шаблонов:** В `BroadcastRules.ts` убрать жесткие `SERVICES`/`PRODUCT`, оставить `PROMO`.
+3.  **Валидация `dayparts`:** В `useUploadForm.ts` запретить отправку без выбранного времени.
+4.  **Управление экранами:** Проверить сброс ТВ при удалении экрана в админке.
+
+---
+*Копируй этот текст. Как будешь готова продолжить, просто напиши «Продолжаем с универсального якоря» или «Продолжаем с контекста».*

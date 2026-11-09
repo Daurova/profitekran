@@ -5,9 +5,9 @@ export const useUploadForm = (onSuccess: () => void) => {
   const resetRef = useRef<(() => void) | null>(null);
 
   const [file, setFile] = useState<File | null>(null);
-  const [contentMode, setContentMode] = useState<'base' | 'promo'>('base'); 
-  const [promoSubtype, setPromoSubtype] = useState<string>('promo_standard');
+  const [contentType, setContentType] = useState<string>('BASE');
   const [orientation, setOrientation] = useState<'HORIZONTAL' | 'VERTICAL'>('HORIZONTAL');
+  const [actionUrl, setActionUrl] = useState<string>(''); // <-- ДОБАВИЛИ
   const [maxPerHour, setMaxPerHour] = useState<number | string>('');
   const [cooldownMin, setCooldownMin] = useState<number | string>('');
   const [requiresConsent, setRequiresConsent] = useState(false);
@@ -16,6 +16,8 @@ export const useUploadForm = (onSuccess: () => void) => {
   const { upload, isUploading, progress, error } = useUpload(() => {
     resetRef.current?.();
     setFile(null);
+    setContentType('BASE');
+    setActionUrl('');
     setMaxPerHour('');
     setCooldownMin('');
     setRequiresConsent(false);
@@ -27,15 +29,11 @@ export const useUploadForm = (onSuccess: () => void) => {
   const handleUpload = () => {
     if (!file) return;
 
-    let finalType = 'BASE';
-    if (contentMode === 'promo') {
-      finalType = promoSubtype === 'anchor' ? 'COFFEE_ANCHOR' : 'PROMO';
-    }
-
     upload({
       file,
-      type: finalType,
+      type: contentType, // <-- ПЕРЕДАЕМ НАПРЯМУЮ ТИП
       orientation,
+      actionUrl: actionUrl || undefined, // <-- ПЕРЕДАЕМ ССЫЛКУ
       maxPerHour: maxPerHour ? Number(maxPerHour) : undefined,
       cooldownMin: cooldownMin ? Number(cooldownMin) : undefined,
       requiresConsent,
@@ -46,9 +44,9 @@ export const useUploadForm = (onSuccess: () => void) => {
   return {
     resetRef,
     file, setFile,
-    contentMode, setContentMode,
-    promoSubtype, setPromoSubtype,
+    contentType, setContentType,
     orientation, setOrientation,
+    actionUrl, setActionUrl, // <-- ВОЗВРАЩАЕМ
     maxPerHour, setMaxPerHour,
     cooldownMin, setCooldownMin,
     requiresConsent, setRequiresConsent,
