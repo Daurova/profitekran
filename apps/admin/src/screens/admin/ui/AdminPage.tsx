@@ -7,7 +7,7 @@ import { fetchMe } from '@/shared/api/client';
 import { BindScreenForm } from '@/features/bind-screen/ui/BindScreenForm'; // <-- Импортируем новую фичу
 import { useNavigate } from 'react-router-dom';
 import { logout } from '@/shared/api/client';
-import { IconLogout } from '@tabler/icons-react';
+import { IconLayoutGrid, IconLogout } from '@tabler/icons-react';
 import { ScreenList } from '@/widgets/screen-list/ui/ScreenList';
 
 
@@ -43,6 +43,13 @@ export const AdminPage = () => {
             Клиент: <Text span fw={700} c="blue">{userData.user.tenantName}</Text>
           </Text>
         )}
+        <Button 
+            variant="light" 
+            leftSection={<IconLayoutGrid size={16} />} 
+            onClick={() => navigate('/wall')}
+          >
+            Медиастена
+          </Button>
         <Button variant="light" color="red" leftSection={<IconLogout size={16} />} onClick={handleLogout}>
             Выйти
         </Button>
