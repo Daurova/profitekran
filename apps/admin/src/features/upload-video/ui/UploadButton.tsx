@@ -1,5 +1,5 @@
 import { 
-  Stack, Progress, Alert, FileInput, Select, NumberInput, 
+  Stack, Progress, Alert, FileInput, NumberInput, 
   Switch, Card, Title, Button, SegmentedControl, Chip, Input, Group, Box, TextInput, 
   Radio
 } from '@mantine/core';
