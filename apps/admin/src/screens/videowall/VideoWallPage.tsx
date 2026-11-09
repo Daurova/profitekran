@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Container, Title, Text, Group, ActionIcon } from '@mantine/core';
 import { IconArrowLeft } from '@tabler/icons-react';
@@ -6,6 +7,7 @@ import { VideoWallForm } from '@/features/video-wall/ui/VideoWallForm';
 
 export const VideoWallPage = () => {
   const navigate = useNavigate();
+  const [layout] = useState<'2_h' | '2_v' | '3_h' | '3_v'>('3_v');
 
   return (
     <Container size="sm" py="xl">
@@ -17,16 +19,19 @@ export const VideoWallPage = () => {
       </Group>
 
       <Text c="dimmed" mb="xl">
-        Настройте три экрана, чтобы они работали как единая система. 
-        Верхний экран будет показывать часы и QR-код, а два нижних — видео.
+        Выберите схему расположения экранов. Верхний экран (или первый в вертикальной схеме) 
+        будет показывать часы и QR-код, остальные — видео.
       </Text>
 
-      {/* Сборка виджетов */}
-      <VideoWallPreview />
+      {/* Превью меняется в зависимости от выбранной схемы */}
+      <VideoWallPreview layout={layout} />
       
       <div style={{ marginTop: '2rem' }}>
         <VideoWallForm 
-          onSave={() => console.log('Сохранить')} 
+          onSave={(selectedLayout) => {
+            console.log('Схема:', selectedLayout);
+            navigate(-1);
+          }} 
           onCancel={() => navigate(-1)} 
         />
       </div>

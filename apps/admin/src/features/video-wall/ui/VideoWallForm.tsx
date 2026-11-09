@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { Stack, TextInput, Group, Button, SegmentedControl, Input, Text } from '@mantine/core';
-import { IconClock, IconDeviceTv, IconLayoutGrid } from '@tabler/icons-react';
+import { Stack, TextInput, Group, Button, SegmentedControl, Input} from '@mantine/core';
+import { IconClock, IconDeviceTv} from '@tabler/icons-react';
 
 export const VideoWallForm = ({ onSave, onCancel }: { onSave: (layout: string) => void, onCancel: () => void }) => {
   const [layout, setLayout] = useState<'2_h' | '2_v' | '3_h' | '3_v'>('3_v');
   const [screens, setScreens] = useState<string[]>(['', '', '']); // 3 поля максимум
 
   const count = layout.startsWith('2') ? 2 : 3;
-  const isHorizontal = layout.endsWith('_h');
+  // const isHorizontal = layout.endsWith('_h');
 
   const handleScreenChange = (index: number, value: string) => {
     const newScreens = [...screens];
