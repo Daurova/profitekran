@@ -1,6 +1,7 @@
 import { 
   Stack, Progress, Alert, FileInput, Select, NumberInput, 
-  Switch, Card, Title, Button, SegmentedControl, Chip, Input, Group, Box, TextInput 
+  Switch, Card, Title, Button, SegmentedControl, Chip, Input, Group, Box, TextInput, 
+  Radio
 } from '@mantine/core';
 import { IconAlertCircle, IconUpload, IconLink } from '@tabler/icons-react';
 import { useUploadForm } from '../model/useUploadForm';
@@ -55,14 +56,26 @@ export const UploadButton = ({ onSuccess }: { onSuccess: () => void }) => {
           disabled={form.isUploading}
         />
 
-        <Select
-          label="Тип контента"
-          value={form.contentType}
-          onChange={(val) => form.setContentType(val || 'BASE')}
-          data={CONTENT_TYPES}
-          size="lg"
-          disabled={form.isUploading}
-        />
+        <Input.Wrapper label="Тип контента">
+          <Radio.Group
+            value={form.contentType}
+            onChange={form.setContentType}
+            mt="xs"
+          >
+            <Stack gap="xs">
+              {CONTENT_TYPES.map((type) => (
+                <Radio
+                  key={type.value}
+                  value={type.value}
+                  label={type.label}
+                  disabled={form.isUploading}
+                  styles={{ label: { fontSize: '16px' } }}
+                />
+              ))}
+            </Stack>
+          </Radio.Group>
+        </Input.Wrapper>
+
 
         {/* КНОПКИ-ТАБЛЕТКИ ДЛЯ ВЫБОРА ВРЕМЕНИ */}
         <Input.Wrapper
