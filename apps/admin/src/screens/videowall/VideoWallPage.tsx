@@ -11,7 +11,7 @@ export const VideoWallPage = () => {
   const navigate = useNavigate();
   const [layout, setLayout] = useState<string>('3_v');
   const [isCreating, setIsCreating] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [, setIsSaving] = useState(false);
 
   // Запрашиваем список стен
   const { data, isLoading, refetch } = useQuery({
