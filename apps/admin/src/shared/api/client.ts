@@ -138,3 +138,12 @@ export const createWall = async (data: any) => {
   if (!res.ok) throw new Error('Ошибка создания стены');
   return res.json();
 };
+
+export const fetchWalls = async () => {
+  const res = await fetch(`${API_URL}/walls`, {
+    headers: getAuthHeaders(),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Ошибка загрузки стен');
+  return res.json();
+};
