@@ -4,6 +4,7 @@ import { playlistRoutes } from './infrastructure/http/playlist.route.js';
 import multipart from '@fastify/multipart';
 import { authRoutes } from './infrastructure/http/auth.route.js';
 import cookie from '@fastify/cookie';
+import { wallRoutes } from './infrastructure/http/wall.route.js';
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({
@@ -41,5 +42,8 @@ export function buildApp(): FastifyInstance {
     return app.printRoutes();
   });
   
+
+// ... внутри buildApp (рядом с другими app.register):
+  app.register(wallRoutes); // <-- Регистрация
   return app;
 }

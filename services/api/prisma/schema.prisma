@@ -16,6 +16,7 @@ model Tenant {
   users           User[]
   screens         Screen[]
   contents        Content[]
+  videoWalls      VideoWall[] // <-- ДОБАВИЛИ СВЯЗЬ
 }
 
 // 2. Роли
@@ -34,7 +35,7 @@ model User {
   otpExpiresAt DateTime?
   
   tenantId     String
-  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade) // <-- ДОБАВЛЕНО
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 // 4. Экран (Приставка)
@@ -47,7 +48,12 @@ model Screen {
   contentIds String[] @default([])
   
   tenantId   String
-  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade) // <-- ДОБАВЛЕНО
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // СВЯЗЬ С МЕДИАСТЕНОЙ
+  wallId     String?
+  wall       VideoWall? @relation(fields: [wallId], references: [id], onDelete: SetNull)
+  wallRole   WallRole?
 }
 
 // 5. Видео
@@ -63,9 +69,9 @@ model Content {
   requiresConsent Boolean     @default(false)
   dayparts        String[]
   createdAt       DateTime    @default(now())
-  actionUrl       String?     // Ссылка для QR-кода
+  actionUrl       String?     
   tenantId        String
-  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade) // <-- ДОБАВЛЕНО
+  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 enum Orientation {
@@ -81,3 +87,51 @@ enum ContentType {
   SERVICE    // Услуга/Сотрудник
 }
 
+// --- МОДЕЛИ ДЛЯ МЕДИАСТЕНЫ ---
+
+enum WallRole {
+  INFO
+  VIDEO_FULL
+  VIDEO_TOP
+  VIDEO_BOTTOM
+  VIDEO_LEFT
+  VIDEO_RIGHT
+}
+
+enum WallLayout {
+  TWO_HORIZONTAL
+  TWO_VERTICAL
+  THREE_HORIZONTAL
+  THREE_VERTICAL
+}
+
+model VideoWall {
+  id         String    @id @default(uuid())
+  name       String
+  layoutType WallLayout
+  
+  tenantId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  screens    Screen[]
+  items      VideoWallItem[]
+  createdAt  DateTime  @default(now())
+}
+
+model VideoWallItem {
+  id          String      @id @default(uuid())
+  wallId      String
+  wall        VideoWall   @relation(fields: [wallId], references: [id], onDelete: Cascade)
+  
+  tenantId    String      
+  type        ContentType
+  url         String
+  durationSec Int
+  orientation Orientation @default(HORIZONTAL)
+  
+  qrUrl       String?     
+  infoText    String?     
+  dayparts    String[]
+  
+  createdAt   DateTime    @default(now())
+}

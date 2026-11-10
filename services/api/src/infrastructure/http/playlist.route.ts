@@ -5,6 +5,7 @@ import { getVideoUrl, uploadVideo, deleteVideo } from '../s3/S3Service.js';
 import { prisma } from '../database/prisma.js';
 import jwt from 'jsonwebtoken';
 import { Orientation } from '@prisma/client';
+import { authPreHandler } from './middlewares/authPreHandler.js';
 
 const JWT_SECRET = process.env['JWT_SECRET'] || 'super-secret-key-for-dev';
 
@@ -12,26 +13,7 @@ export async function playlistRoutes(app: FastifyInstance) {
   const contentRepository = new PrismaContentRepository();
   const generatePlaylistUseCase = new GeneratePlaylistUseCase(contentRepository);
 
-  // Middleware для проверки JWT
-  const authPreHandler = async (request: any, reply: any) => {
-    try {
-      let token = '';
-      const authHeader = request.headers.authorization;
-      
-      if (authHeader) {
-        token = authHeader.split(' ')[1];
-      } else if (request.cookies && request.cookies.auth_token) {
-        token = request.cookies.auth_token;
-      }
 
-      if (!token) throw new Error('Нет токена');
-      
-      const decoded = jwt.verify(token, JWT_SECRET) as any;
-      request.user = decoded;
-    } catch (err) {
-      return reply.status(401).send({ error: 'Неавторизован' });
-    }
-  };
 
   // 1. Плейлист (Требует tenantId, иначе 400)
     // 1. Плейлист (ОТКРЫТ для ТВ, принимает ?deviceId=...)
