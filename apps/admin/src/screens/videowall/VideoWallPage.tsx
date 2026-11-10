@@ -2,12 +2,17 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Container, Title, Text, Group, ActionIcon } from '@mantine/core';
 import { IconArrowLeft } from '@tabler/icons-react';
-import { VideoWallPreview } from '@/widgets/video-wall-preview/ui/VideoWallPreview';
 import { VideoWallForm } from '@/features/video-wall/ui/VideoWallForm';
 
 export const VideoWallPage = () => {
   const navigate = useNavigate();
-  const [layout, setLayout] = useState<'2_h' | '2_v' | '3_h' | '3_v'>('3_v');
+  const [layout, setLayout] = useState<string>('3_v');
+
+  const handleSave = (codes: Record<string, string>) => {
+    console.log('Отправляем на бэкенд:', { layout, codes });
+    alert('Данные собраны! Смотри консоль (F12).');
+    navigate(-1);
+  };
 
   return (
     <Container size="sm" py="xl">
@@ -19,23 +24,15 @@ export const VideoWallPage = () => {
       </Group>
 
       <Text c="dimmed" mb="xl">
-        Выберите схему расположения экранов. Экран «Инфо» будет показывать часы и QR-код, 
-        а экраны «Видео» — части одного большого видео.
+        Кликните на нужный экран и введите код, который отображается на вашем физическом телевизоре.
       </Text>
-
-      <VideoWallPreview layout={layout} />
       
-      <div style={{ marginTop: '2rem' }}>
-        <VideoWallForm 
-          layout={layout}
-          setLayout={setLayout}
-          onSave={() => {
-            console.log('Сохраняем раскладку:', layout);
-            navigate(-1);
-          }} 
-          onCancel={() => navigate(-1)} 
-        />
-      </div>
+      <VideoWallForm 
+        layout={layout}
+        setLayout={setLayout}
+        onSave={handleSave} 
+        onCancel={() => navigate(-1)} 
+      />
     </Container>
   );
 };
