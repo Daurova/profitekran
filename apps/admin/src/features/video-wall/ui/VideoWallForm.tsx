@@ -24,8 +24,8 @@ export const VideoWallForm = ({
   const isVerticalWall = layout.endsWith('_v');
 
   const handleSave = () => {
-       onSave({
-      layoutType: layout, // <-- переименовали
+          onSave({
+      layout: layout, // <-- переименовали
       screens: codes,     // <-- переименовали
       baseContent: { videos: baseVideos },
       infoContent: infoData,
