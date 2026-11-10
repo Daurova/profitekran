@@ -27,24 +27,38 @@ export async function playlistRoutes(app: FastifyInstance) {
       }
 
       // Ищем экран (приставку) в базе по deviceId
-      const screen = await prisma.screen.findUnique({ 
+           const screen = await prisma.screen.findUnique({ 
         where: { deviceId },
-        include: { tenant: true } // Сразу подтягиваем данные клиента
+        include: { tenant: true, wall: true } // <-- ДОБАВИЛИ wall
       });
 
-      // Если экран не найден или он отключен — 403
       if (!screen || !screen.isActive) {
         return reply.status(403).send({ error: 'Экран не активирован или отключен' });
       }
 
-      // Проверяем, активен ли сам клиент (тенант) — вдруг у него не оплачен тариф
       if (!screen.tenant.isActive) {
         return reply.status(403).send({ error: 'Подписка клиента приостановлена' });
       }
 
-      // Генерируем плейлист для найденного тенанта
+      // 1. Если экран в стене — отдаем контент стены
+      if (screen.wallId) {
+        const wallItems = await prisma.videoWallItem.findMany({
+          where: { wallId: screen.wallId },
+          orderBy: { createdAt: 'asc' }
+        });
+
+        return { 
+          status: 'success', 
+          isWall: true,
+          wallRole: screen.wallRole,
+          wallLayout: screen.wall?.layoutType,
+          data: wallItems 
+        };
+      }
+
+      // 2. Если одиночный экран — генерируем обычный плейлист
       const playlist = await generatePlaylistUseCase.execute(screen.tenantId);
-      return { status: 'success', data: playlist };
+      return { status: 'success', isWall: false, data: playlist };
     } catch (error) {
       app.log.error(error);
       return reply.status(500).send({ status: 'error', message: error instanceof Error ? error.message : 'Unknown error' });
