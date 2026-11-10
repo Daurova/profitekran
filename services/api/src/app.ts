@@ -18,7 +18,7 @@ export function buildApp(): FastifyInstance {
       'https://profitekran.online',
       'https://designation-forbes-webcams-accepting.trycloudflare.com',
       'https://explanation-outputs-pierce-another.trycloudflare.com'],
-    credentials: true, // <-- Разрешаем передачу куки
+    credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
@@ -32,18 +32,15 @@ export function buildApp(): FastifyInstance {
       fileSize: 100 * 1024 * 1024,
     },
   });  
-  
 
   app.register(authRoutes); 
   app.register(playlistRoutes);
+  app.register(wallRoutes); // <-- ПЕРЕНЕСЛИ СЮДА
 
   // Временный дебаг-роут
   app.get('/debug-routes', async () => {
     return app.printRoutes();
   });
   
-
-// ... внутри buildApp (рядом с другими app.register):
-  app.register(wallRoutes); // <-- Регистрация
-  return app;
+  return app; // <-- return ДОЛЖЕН БЫТЬ В САМОМ КОНЦЕ
 }

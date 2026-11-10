@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { Loader, Center } from '@mantine/core';
+import { API_URL } from '@/shared/api/client'; // <-- Импорт
+
 
 export const ProtectedRoute = () => {
   const [isAuth, setIsAuth] = useState<boolean | null>(null);
 
   useEffect(() => {
-    fetch('https://profitekran.online/api/auth/me', {
+    fetch(`${API_URL}/auth/me`, {
       credentials: 'include',
     })
       .then((res) => setIsAuth(res.ok))

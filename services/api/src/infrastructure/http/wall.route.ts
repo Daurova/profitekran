@@ -4,17 +4,44 @@ import { authPreHandler } from './middlewares/authPreHandler.js';
 import { WallLayout, WallRole } from '@prisma/client';
 
 export async function wallRoutes(app: FastifyInstance) {
-  // 1. Создание Медиастены
+  // 1. Проверка кода экрана при вводе
+  app.post('/walls/verify-screen', { preHandler: authPreHandler }, async (request, reply) => {
+    try {
+      const tenantId = (request as any).user.tenantId;
+      const { deviceId } = request.body as { deviceId: string };
+
+      if (!deviceId) return reply.status(400).send({ error: 'Нужен deviceId' });
+
+      const screen = await prisma.screen.findUnique({ where: { deviceId } });
+
+      // Если экран есть и принадлежит другому клиенту — ошибка
+      if (screen && screen.tenantId !== tenantId) {
+        return reply.status(403).send({ error: 'Этот экран уже привязан к другому клиенту' });
+      }
+
+      // Если экран есть и уже в стене — ошибка
+      if (screen && screen.wallId) {
+        return reply.status(400).send({ error: 'Этот экран уже используется в другой медиастене' });
+      }
+
+      // Если экрана нет в базе или он свободен — разрешаем (создадим при сборке)
+      return { status: 'success', message: 'Экран свободен' };
+    } catch (error) {
+      app.log.error(error);
+      return reply.status(500).send({ error: 'Ошибка проверки экрана' });
+    }
+  });
+
+  // 2. Создание Медиастены
   app.post('/walls', { preHandler: authPreHandler }, async (request, reply) => {
     try {
       const tenantId = (request as any).user.tenantId;
-      const { layoutType, screens, baseContent, infoContent, promoContent } = request.body as any;
+      const { layout, screens, baseContent, infoContent, promoContent } = request.body as any;
 
-      if (!layoutType || !screens) {
+      if (!layout || !screens) {
         return reply.status(400).send({ error: 'Нужны layoutType и screens' });
       }
 
-      // Мапим строку схемы из UI в Enum
       const layoutMap: Record<string, WallLayout> = {
         '2_h': WallLayout.TWO_HORIZONTAL,
         '2_v': WallLayout.TWO_VERTICAL,
@@ -22,59 +49,68 @@ export async function wallRoutes(app: FastifyInstance) {
         '3_v': WallLayout.THREE_VERTICAL,
       };
 
-      const layout = layoutMap[layoutType];
-      if (!layout) return reply.status(400).send({ error: 'Неверная схема' });
+      const layoutEnum = layoutMap[layout];
+      if (!layoutEnum) return reply.status(400).send({ error: 'Неверная схема' });
 
-      // Проверяем, что все экраны существуют и принадлежат тенанту
-      const screenCodes = Object.values(screens); // ['A1B2C3', 'D4E5F6'...]
-      const dbScreens = await prisma.screen.findMany({
-        where: { deviceId: { in: screenCodes as string[] }, tenantId },
+      const screenCodes = Object.values(screens) as string[];
+      const existingScreens = await prisma.screen.findMany({
+        where: { deviceId: { in: screenCodes } },
       });
 
-      if (dbScreens.length !== screenCodes.length) {
-        return reply.status(404).send({ error: 'Некоторые экраны не найдены или не принадлежат вам' });
-      }
-
-      // Создаем стену в транзакции (чтобы если что-то упадет, ничего не сохранилось)
       const wall = await prisma.$transaction(async (tx) => {
-        // 1. Создаем саму стену
         const newWall = await tx.videoWall.create({
           data: {
-            name: `Стена ${layoutType}`, // Можно потом добавить поле name в UI
-            layoutType: layout,
+            name: `Стена ${layout}`,
+            layoutType: layoutEnum,
             tenantId,
           },
         });
 
-        // 2. Привязываем экраны и назначаем роли
+        // Привязываем или создаем экраны
         for (const [role, code] of Object.entries(screens)) {
-          await tx.screen.update({
-            where: { deviceId: code as string },
-            data: {
-              wallId: newWall.id,
-              wallRole: role as WallRole,
-            },
-          });
+          const existing = existingScreens.find(s => s.deviceId === code);
+          
+          if (existing) {
+            await tx.screen.update({
+              where: { id: existing.id },
+              data: {
+                wallId: newWall.id,
+                wallRole: role as WallRole,
+                tenantId, // привязываем к текущему тенанту
+              },
+            });
+          } else {
+            // Если экрана нет в базе (телевизор новый), создаем его!
+            await tx.screen.create({
+              data: {
+                deviceId: code as string,
+                name: `Экран ${role}`,
+                tenantId,
+                wallId: newWall.id,
+                wallRole: role as WallRole,
+              },
+            });
+          }
         }
 
-        // 3. Сохраняем Базовые видео (у них общий QR и текст)
+        // Сохраняем Базовые видео
         for (const v of baseContent.videos) {
           await tx.videoWallItem.create({
             data: {
               wallId: newWall.id,
               tenantId,
               type: 'BASE',
-              url: 'temp-url', // В реальности url придет после загрузки в S3
+              url: v.url || 'temp-url',
               durationSec: v.durationSec || 15,
               orientation: v.orientation,
               dayparts: v.dayparts,
-              qrUrl: infoContent?.qrUrl, // Общий QR для базовых
+              qrUrl: infoContent?.qrUrl,
               infoText: infoContent?.text,
             },
           });
         }
 
-        // 4. Сохраняем Рекламные видео (у них индивидуальный QR)
+        // Сохраняем Рекламные видео
         for (const v of promoContent) {
           await tx.videoWallItem.create({
             data: {

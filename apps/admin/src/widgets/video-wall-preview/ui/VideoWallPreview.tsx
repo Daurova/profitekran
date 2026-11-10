@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { 
-  Paper, Box, Stack, Text, SimpleGrid, Button, Group, 
+  Paper, Stack, Text, SimpleGrid, Button, Group, 
   TextInput, ActionIcon 
 } from '@mantine/core';
 import { IconClock, IconQrcode, IconDeviceTv, IconPlus, IconCheck, IconX } from '@tabler/icons-react';
+import { notifications } from '@mantine/notifications';
 
-// Описание ролей для каждой схемы
 const LAYOUT_ROLES: Record<string, { label: string; role: string; isInfo: boolean; height: number }[]> = {
   '2_h': [
     { label: 'Экран 1: Видео', role: 'VIDEO_FULL', isInfo: false, height: 120 },
@@ -13,7 +13,7 @@ const LAYOUT_ROLES: Record<string, { label: string; role: string; isInfo: boolea
   ],
   '2_v': [
     { label: 'Экран 1: Видео', role: 'VIDEO_FULL', isInfo: false, height: 120 },
-    { label: 'Экран 2: Инфо', role: 'INFO', isInfo: true, height: 80 }, // <-- ИНФО ВНИЗУ
+    { label: 'Экран 2: Инфо', role: 'INFO', isInfo: true, height: 80 },
   ],
   '3_h': [
     { label: 'Экран 1: Видео (лево)', role: 'VIDEO_LEFT', isInfo: false, height: 120 },
@@ -23,7 +23,7 @@ const LAYOUT_ROLES: Record<string, { label: string; role: string; isInfo: boolea
   '3_v': [
     { label: 'Экран 1: Видео (верх)', role: 'VIDEO_TOP', isInfo: false, height: 100 },
     { label: 'Экран 2: Видео (низ)', role: 'VIDEO_BOTTOM', isInfo: false, height: 100 },
-    { label: 'Экран 3: Инфо', role: 'INFO', isInfo: true, height: 60 }, // <-- ИНФО ВНИЗУ
+    { label: 'Экран 3: Инфо', role: 'INFO', isInfo: true, height: 60 },
   ],
 };
 
@@ -36,6 +36,7 @@ interface VideoWallPreviewProps {
 export const VideoWallPreview = ({ layout, codes, onCodeChange }: VideoWallPreviewProps) => {
   const [editingRole, setEditingRole] = useState<string | null>(null);
   const [tempCode, setTempCode] = useState('');
+  const [isChecking, setIsChecking] = useState(false);
 
   const roles = LAYOUT_ROLES[layout] || LAYOUT_ROLES['3_v'];
 
@@ -44,11 +45,36 @@ export const VideoWallPreview = ({ layout, codes, onCodeChange }: VideoWallPrevi
     setTempCode(codes[role] || '');
   };
 
-  const handleSave = () => {
-    if (editingRole && tempCode) {
+  const handleSave = async () => {
+    if (!editingRole || !tempCode) return;
+    setIsChecking(true);
+
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'https://profitekran.online/api';
+      const res = await fetch(`${API_URL}/walls/verify-screen`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId: tempCode.toUpperCase() }),
+        credentials: 'include',
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Ошибка проверки');
+      }
+
       onCodeChange(editingRole, tempCode.toUpperCase());
+      setEditingRole(null);
+      notifications.show({ title: 'Успех', message: 'Экран свободен и привязан', color: 'green' });
+    } catch (err) {
+      notifications.show({
+        title: 'Ошибка',
+        message: err instanceof Error ? err.message : 'Не удалось привязать экран',
+        color: 'red',
+      });
+    } finally {
+      setIsChecking(false);
     }
-    setEditingRole(null);
   };
 
   const handleCancel = () => {
@@ -77,7 +103,6 @@ export const VideoWallPreview = ({ layout, codes, onCodeChange }: VideoWallPrevi
           {isInfo && <IconQrcode size={20} />}
         </Group>
 
-        {/* Если редактируем — показываем инпут */}
         {isEditing ? (
           <Group gap="xs" wrap="nowrap">
             <TextInput
@@ -87,16 +112,16 @@ export const VideoWallPreview = ({ layout, codes, onCodeChange }: VideoWallPrevi
               onChange={(e) => setTempCode(e.currentTarget.value.toUpperCase())}
               autoFocus
               style={{ width: 100 }}
+              disabled={isChecking}
             />
-            <ActionIcon color="green" variant="subtle" onClick={handleSave}>
+            <ActionIcon color="green" variant="subtle" onClick={handleSave} loading={isChecking}>
               <IconCheck size={18} />
             </ActionIcon>
-            <ActionIcon color="red" variant="subtle" onClick={handleCancel}>
+            <ActionIcon color="red" variant="subtle" onClick={handleCancel} disabled={isChecking}>
               <IconX size={18} />
             </ActionIcon>
           </Group>
         ) : savedCode ? (
-          /* Если код уже есть — показываем его и кнопку сброса */
           <Group gap="xs">
             <IconCheck size={16} color="green" />
             <Text fw={700} size="md" c="green" style={{ cursor: 'pointer' }} onClick={() => handleStartEdit(role)}>
@@ -104,7 +129,6 @@ export const VideoWallPreview = ({ layout, codes, onCodeChange }: VideoWallPrevi
             </Text>
           </Group>
         ) : (
-          /* Если кода нет — кнопка добавить */
           <Button variant="light" size="xs" leftSection={<IconPlus size={14} />} onClick={() => handleStartEdit(role)}>
             Ввести код
           </Button>

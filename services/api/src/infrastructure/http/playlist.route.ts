@@ -198,7 +198,7 @@ export async function playlistRoutes(app: FastifyInstance) {
 
       // Ищем экран, принадлежащий этому тенанту
       const screen = await prisma.screen.findFirst({
-        where: { id, tenantId },
+        where: { id, tenantId, wallId: null },
       });
 
       if (!screen) {
