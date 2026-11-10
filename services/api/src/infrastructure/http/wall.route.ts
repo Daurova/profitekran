@@ -64,7 +64,7 @@ export async function wallRoutes(app: FastifyInstance) {
               wallId: newWall.id,
               tenantId,
               type: 'BASE',
-              url: v.url || 'temp-url', // В реальности url придет после загрузки в S3
+              url: 'temp-url', // В реальности url придет после загрузки в S3
               durationSec: v.durationSec || 15,
               orientation: v.orientation,
               dayparts: v.dayparts,

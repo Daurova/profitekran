@@ -127,3 +127,14 @@ export const deleteScreenById = async (id: string) => {
   if (!res.ok) throw new Error('Ошибка удаления экрана');
   return res.json();
 };
+
+export const createWall = async (data: any) => {
+  const res = await fetch(`${API_URL}/walls`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Ошибка создания стены');
+  return res.json();
+};
