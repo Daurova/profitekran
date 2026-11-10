@@ -1,4 +1,4 @@
-import { Card, Table, Text, Badge, Group, Loader, Center, ActionIcon } from '@mantine/core';
+import { Card, Table, Text, Badge, Group, Loader, Center } from '@mantine/core';
 import { IconDeviceTv } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchWalls } from '@/shared/api/client';
