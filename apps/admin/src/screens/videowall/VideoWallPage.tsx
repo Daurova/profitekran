@@ -9,7 +9,7 @@ import { createWall } from '@/shared/api/client';
 export const VideoWallPage = () => {
   const navigate = useNavigate();
   const [layout, setLayout] = useState<string>('3_v');
-  const [isSaving, setIsSaving] = useState(false);
+  const [,setIsSaving] = useState(false);
 
   const handleSave = async (data: any) => {
     setIsSaving(true);
