@@ -7,17 +7,18 @@ export const usePlaylist = () => {
   const [videos, setVideos] = useState<ContentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUnauthorized, setIsUnauthorized] = useState(false);
+  const [isWall, setIsWall] = useState(false);
+  const [wallRole, setWallRole] = useState<string | null>(null);
 
   const load = async (): Promise<boolean> => {
     try {
       const deviceId = getDeviceId();
       const data = await fetchPlaylist(deviceId);
 
-      // ЖЕСТКО: Если 403, всегда показываем экран активации и чистим кэш
       if (data.status === 'unauthorized') {
         setIsUnauthorized(true);
         setVideos([]);
-        localStorage.removeItem('cached_playlist'); // Удаляем старый кэш
+        localStorage.removeItem('cached_playlist');
         setIsLoading(false);
         return false;
       }
@@ -25,12 +26,17 @@ export const usePlaylist = () => {
       if (data.status === 'success' && data.data) {
         setIsUnauthorized(false);
         setVideos(data.data);
-        
+        setIsWall(data.isWall || false);
+        setWallRole(data.wallRole || null);
+
         localStorage.setItem('cached_playlist', JSON.stringify(data.data));
+        localStorage.setItem('cached_is_wall', String(data.isWall || false));
+        localStorage.setItem('cached_wall_role', data.wallRole || '');
+
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
           navigator.serviceWorker.controller.postMessage({
             type: 'CACHE_VIDEOS',
-            videos: data.data.map((item) => item.url),
+            videos: data.data.map((item: any) => item.url),
           });
         }
         setIsLoading(false);
@@ -43,6 +49,8 @@ export const usePlaylist = () => {
         const parsed = JSON.parse(cached);
         if (parsed.length > 0) {
           setVideos(parsed);
+          setIsWall(localStorage.getItem('cached_is_wall') === 'true');
+          setWallRole(localStorage.getItem('cached_wall_role'));
         } else {
           setIsUnauthorized(true);
         }
@@ -70,5 +78,5 @@ export const usePlaylist = () => {
     return () => clearInterval(interval);
   }, [isUnauthorized]);
 
-  return { videos, isLoading, isUnauthorized };
+  return { videos, isLoading, isUnauthorized, isWall, wallRole };
 };

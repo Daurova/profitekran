@@ -1,6 +1,13 @@
 import { type ContentItem } from '../../pages/home/HomePage';
 
-export const fetchPlaylist = async (deviceId: string): Promise<{ status: string; data?: ContentItem[]; error?: string }> => {
+export const fetchPlaylist = async (deviceId: string): Promise<{ 
+  status: string; 
+  data?: 
+  ContentItem[]; 
+  error?: string  
+  isWall?: boolean;    
+  wallRole?: string;
+}> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 3000);
 
