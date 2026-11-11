@@ -13,23 +13,18 @@ export async function playlistRoutes(app: FastifyInstance) {
   const contentRepository = new PrismaContentRepository();
   const generatePlaylistUseCase = new GeneratePlaylistUseCase(contentRepository);
 
-
-
-  // 1. Плейлист (Требует tenantId, иначе 400)
-    // 1. Плейлист (ОТКРЫТ для ТВ, принимает ?deviceId=...)
+  // 1. Плейлист (ОТКРЫТ для ТВ, принимает ?deviceId=...)
   app.get('/playlist', async (request, reply) => {
     try {
       const { deviceId } = request.query as { deviceId?: string };
       
-      // Если deviceId нет — сразу отдаем 400
       if (!deviceId) {
         return reply.status(400).send({ error: 'Не передан deviceId. Укажите ?deviceId=...' });
       }
 
-      // Ищем экран (приставку) в базе по deviceId
-           const screen = await prisma.screen.findUnique({ 
+      const screen = await prisma.screen.findUnique({ 
         where: { deviceId },
-        include: { tenant: true, wall: true } // <-- ДОБАВИЛИ wall
+        include: { tenant: true, wall: true }
       });
 
       if (!screen || !screen.isActive) {
@@ -47,12 +42,18 @@ export async function playlistRoutes(app: FastifyInstance) {
           orderBy: { createdAt: 'asc' }
         });
 
+        // ПРЕОБРАЗУЕМ КЛЮЧИ S3 В ПОЛНЫЕ ССЫЛКИ
+        const dataWithUrls = wallItems.map(item => ({
+          ...item,
+          url: getVideoUrl(item.url),
+        }));
+
         return { 
           status: 'success', 
           isWall: true,
           wallRole: screen.wallRole,
           wallLayout: screen.wall?.layoutType,
-          data: wallItems 
+          data: dataWithUrls 
         };
       }
 
@@ -85,7 +86,6 @@ export async function playlistRoutes(app: FastifyInstance) {
   });
 
   // 3. Добавление записи в базу (ЗАЩИЩЕНО)
-    // 3. Добавление записи в базу (ЗАЩИЩЕНО)
   app.post('/add-video', { preHandler: authPreHandler }, async (request, reply) => {
     try {
       const { 
@@ -98,7 +98,7 @@ export async function playlistRoutes(app: FastifyInstance) {
         maxPerHour?: number, 
         cooldownMin?: number, 
         requiresConsent?: boolean,
-        dayparts?: string[] // <-- ДОБАВИЛИ
+        dayparts?: string[]
       };
       
       if (!key || !type) return reply.status(400).send({ error: 'Нужны key и type' });
@@ -113,7 +113,6 @@ export async function playlistRoutes(app: FastifyInstance) {
           maxPerHour: maxPerHour ?? null,
           cooldownMin: cooldownMin ?? null,
           requiresConsent: requiresConsent || false,
-          // Если dayparts пришли — берем их, иначе ставим "всегда"
           dayparts: dayparts && dayparts.length > 0 
             ? dayparts 
             : ['09-11', '11-14', '14-17', '17-20', '20-22'],
@@ -149,10 +148,7 @@ export async function playlistRoutes(app: FastifyInstance) {
       const userTenantId = (request as any).user.tenantId;
       
       const content = await prisma.content.findFirst({ 
-        where: { 
-          id,
-          tenantId: userTenantId 
-        } 
+        where: { id, tenantId: userTenantId } 
       });
       
       if (!content) {
@@ -169,7 +165,7 @@ export async function playlistRoutes(app: FastifyInstance) {
     }
   });
 
-    // 6. Добавление экрана (привязка приставки к клиенту)
+  // 6. Добавление экрана (привязка приставки к клиенту)
   app.post('/screens', { preHandler: authPreHandler }, async (request, reply) => {
     try {
       const { deviceId, name } = request.body as { deviceId: string, name: string };
@@ -178,11 +174,7 @@ export async function playlistRoutes(app: FastifyInstance) {
       if (!deviceId || !name) return reply.status(400).send({ error: 'Нужны deviceId и name' });
 
       const screen = await prisma.screen.create({
-        data: {
-          deviceId,
-          name,
-          tenantId,
-        },
+        data: { deviceId, name, tenantId },
       });
 
       return { status: 'success', screen };
@@ -191,11 +183,12 @@ export async function playlistRoutes(app: FastifyInstance) {
       return reply.status(500).send({ error: 'Ошибка добавления экрана' });
     }
   });
-    // 7. Получение списка экранов (ЗАЩИЩЕНО)
+
+  // 7. Получение списка экранов (ЗАЩИЩЕНО)
   app.get('/screens', { preHandler: authPreHandler }, async (request, reply) => {
     try {
       const screens = await prisma.screen.findMany({
-        where: { tenantId: (request as any).user.tenantId },
+        where: { tenantId: (request as any).user.tenantId, wallId: null }, // Только одиночные
         orderBy: { name: 'asc' },
       });
       return { status: 'success', data: screens };
@@ -204,13 +197,13 @@ export async function playlistRoutes(app: FastifyInstance) {
       return reply.status(500).send({ error: 'Ошибка получения списка экранов' });
     }
   });
-    // 8. Удаление экрана (ЗАЩИЩЕНО)
+
+  // 8. Удаление экрана (ЗАЩИЩЕНО)
   app.delete('/screens/:id', { preHandler: authPreHandler }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
       const tenantId = (request as any).user.tenantId;
 
-      // Ищем экран, принадлежащий этому тенанту
       const screen = await prisma.screen.findFirst({
         where: { id, tenantId, wallId: null },
       });
