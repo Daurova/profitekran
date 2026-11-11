@@ -42,7 +42,20 @@ export async function playlistRoutes(app: FastifyInstance) {
           orderBy: { createdAt: 'asc' }
         });
 
-        // ПРЕОБРАЗУЕМ КЛЮЧИ S3 В ПОЛНЫЕ ССЫЛКИ
+        // Если это ИНФО-экран — отдаем настройки (текст и QR)
+        if (screen.wallRole === 'INFO') {
+          const infoData = wallItems.find(item => item.type === 'BASE') || wallItems[0];
+          
+          return {
+            status: 'success',
+            isWall: true,
+            wallRole: 'INFO',
+            infoText: infoData?.infoText || 'Записаться',
+            qrUrl: infoData?.qrUrl || '',
+          };
+        }
+
+        // Если это ВИДЕО-экран — отдаем видео
         const dataWithUrls = wallItems.map(item => ({
           ...item,
           url: getVideoUrl(item.url),
@@ -91,14 +104,14 @@ export async function playlistRoutes(app: FastifyInstance) {
       const { 
         key, type, durationSec, orientation, maxPerHour, cooldownMin, requiresConsent, dayparts 
       } = request.body as { 
-        key: string, 
-        type: string, 
-        durationSec: number, 
-        orientation?: Orientation,
-        maxPerHour?: number, 
-        cooldownMin?: number, 
-        requiresConsent?: boolean,
-        dayparts?: string[]
+        key: string; 
+        type: string; 
+        durationSec: number; 
+        orientation?: Orientation;
+        maxPerHour?: number; 
+        cooldownMin?: number; 
+        requiresConsent?: boolean;
+        dayparts?: string[];
       };
       
       if (!key || !type) return reply.status(400).send({ error: 'Нужны key и type' });

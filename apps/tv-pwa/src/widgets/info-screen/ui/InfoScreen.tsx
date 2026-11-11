@@ -1,7 +1,8 @@
 import { Box, Text, Stack, Title } from '@mantine/core';
 import { useEffect, useState } from 'react';
+import QRCode from 'react-qr-code'; // <-- Убедись, что библиотека установлена (npm i react-qr-code)
 
-export const InfoScreen = () => {
+export const InfoScreen = ({ infoText, qrUrl }: { infoText: string; qrUrl: string }) => {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -33,13 +34,16 @@ export const InfoScreen = () => {
           {dateString}
         </Text>
         
-        {/* Здесь потом будет QR-код, пока заглушка */}
         <Box mt="xl" p="xl" bg="white" style={{ borderRadius: 16 }}>
-          <Text c="black" fw={700} size="xl" ta="center">
-            QR-код
-          </Text>
-          <Text c="dimmed" size="sm" ta="center">
-            (Записаться на услугу)
+          {qrUrl && (
+            <QRCode 
+              value={qrUrl} 
+              size={200} 
+              style={{ height: "auto", maxWidth: "100%", width: "100%" }} 
+            />
+          )}
+          <Text c="black" fw={700} size="xl" ta="center" mt="md">
+            {infoText || 'Записаться'}
           </Text>
         </Box>
       </Stack>

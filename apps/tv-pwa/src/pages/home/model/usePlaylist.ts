@@ -9,6 +9,10 @@ export const usePlaylist = () => {
   const [isUnauthorized, setIsUnauthorized] = useState(false);
   const [isWall, setIsWall] = useState(false);
   const [wallRole, setWallRole] = useState<string | null>(null);
+  
+  // ДОБАВИЛИ: стейты для инфо-экрана
+  const [infoText, setInfoText] = useState<string>('');
+  const [qrUrl, setQrUrl] = useState<string>('');
 
   const load = async (): Promise<boolean> => {
     try {
@@ -23,6 +27,24 @@ export const usePlaylist = () => {
         return false;
       }
 
+      // Если это инфо-экран (нет data, но есть infoText)
+      if (data.status === 'success' && data.isWall && data.wallRole === 'INFO') {
+        setIsUnauthorized(false);
+        setIsWall(true);
+        setWallRole('INFO');
+        setInfoText(data.infoText || '');
+        setQrUrl(data.qrUrl || '');
+
+        localStorage.setItem('cached_is_wall', 'true');
+        localStorage.setItem('cached_wall_role', 'INFO');
+        localStorage.setItem('cached_info_text', data.infoText || '');
+        localStorage.setItem('cached_qr_url', data.qrUrl || '');
+        
+        setIsLoading(false);
+        return true;
+      }
+
+      // Если это видео-экран (или одиночный)
       if (data.status === 'success' && data.data) {
         setIsUnauthorized(false);
         setVideos(data.data);
@@ -45,12 +67,20 @@ export const usePlaylist = () => {
     } catch (err) {
       // При ошибке сети (если нет интернета) берем кэш
       const cached = localStorage.getItem('cached_playlist');
-      if (cached) {
+      const cachedIsWall = localStorage.getItem('cached_is_wall') === 'true';
+      const cachedRole = localStorage.getItem('cached_wall_role');
+
+      if (cachedIsWall && cachedRole === 'INFO') {
+        setInfoText(localStorage.getItem('cached_info_text') || '');
+        setQrUrl(localStorage.getItem('cached_qr_url') || '');
+        setIsWall(true);
+        setWallRole('INFO');
+      } else if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed.length > 0) {
           setVideos(parsed);
-          setIsWall(localStorage.getItem('cached_is_wall') === 'true');
-          setWallRole(localStorage.getItem('cached_wall_role'));
+          setIsWall(cachedIsWall);
+          setWallRole(cachedRole);
         } else {
           setIsUnauthorized(true);
         }
@@ -78,5 +108,5 @@ export const usePlaylist = () => {
     return () => clearInterval(interval);
   }, [isUnauthorized]);
 
-  return { videos, isLoading, isUnauthorized, isWall, wallRole };
+  return { videos, isLoading, isUnauthorized, isWall, wallRole, infoText, qrUrl };
 };

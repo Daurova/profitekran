@@ -1,7 +1,7 @@
 import { Box, Loader, Center, Text, Title, Stack, Code } from '@mantine/core';
 import { Player } from '../../widgets/player/Player';
 import { TVOverlay } from '../../widgets/tv-overlay/TVOverlay';
-import { InfoScreen } from '../../widgets/info-screen/ui/InfoScreen'; // <-- ИМПОРТ
+import { InfoScreen } from '../../widgets/info-screen/ui/InfoScreen';
 import { usePlaylist } from './model/usePlaylist';
 import { getDeviceId } from '../../shared/lib/device';
 
@@ -14,7 +14,7 @@ export interface ContentItem {
 }
 
 export const HomePage = () => {
-  const { videos, isLoading, isUnauthorized, isWall, wallRole } = usePlaylist();
+  const { videos, isLoading, isUnauthorized, isWall, wallRole, infoText, qrUrl } = usePlaylist();
 
   if (isLoading) return <Box w="100vw" h="100vh" bg="black"><Center h="100%"><Loader color="blue" size="xl" type="dots" /></Center></Box>;
 
@@ -39,7 +39,7 @@ export const HomePage = () => {
 
   // ЕСЛИ ЭТО ИНФО-ЭКРАН — ПОКАЗЫВАЕМ ЧАСЫ И QR
   if (isWall && wallRole === 'INFO') {
-    return <InfoScreen />;
+    return <InfoScreen infoText={infoText} qrUrl={qrUrl} />;
   }
 
   if (videos.length === 0) return <Box w="100vw" h="100vh" bg="black" style={{ color: 'white', textAlign: 'center', paddingTop: '40vh' }}>Нет контента</Box>;
