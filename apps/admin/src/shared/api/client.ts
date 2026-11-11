@@ -147,3 +147,27 @@ export const fetchWalls = async () => {
   if (!res.ok) throw new Error('Ошибка загрузки стен');
   return res.json();
 };
+
+// Создание каркаса стены
+export const createWallFrame = async (data: { layout: string, screens: Record<string, string> }) => {
+  const res = await fetch(`${API_URL}/walls`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Ошибка создания стены');
+  return res.json();
+};
+
+// Загрузка контента в стену
+export const saveWallContent = async (wallId: string, data: any) => {
+  const res = await fetch(`${API_URL}/walls/${wallId}/content`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Ошибка сохранения контента');
+  return res.json();
+};

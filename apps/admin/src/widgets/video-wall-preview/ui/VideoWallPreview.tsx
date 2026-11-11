@@ -5,27 +5,8 @@ import {
 } from '@mantine/core';
 import { IconClock, IconQrcode, IconDeviceTv, IconPlus, IconCheck, IconX } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
+import { getLayoutRoles } from '@/shared/config/wall-layouts';
 
-const LAYOUT_ROLES: Record<string, { label: string; role: string; isInfo: boolean; height: number }[]> = {
-  '2_h': [
-    { label: 'Экран 1: Видео', role: 'VIDEO_FULL', isInfo: false, height: 120 },
-    { label: 'Экран 2: Инфо', role: 'INFO', isInfo: true, height: 120 },
-  ],
-  '2_v': [
-    { label: 'Экран 1: Видео', role: 'VIDEO_FULL', isInfo: false, height: 120 },
-    { label: 'Экран 2: Инфо', role: 'INFO', isInfo: true, height: 80 },
-  ],
-  '3_h': [
-    { label: 'Экран 1: Видео (лево)', role: 'VIDEO_LEFT', isInfo: false, height: 120 },
-    { label: 'Экран 2: Видео (право)', role: 'VIDEO_RIGHT', isInfo: false, height: 120 },
-    { label: 'Экран 3: Инфо', role: 'INFO', isInfo: true, height: 120 },
-  ],
-  '3_v': [
-    { label: 'Экран 1: Видео (верх)', role: 'VIDEO_TOP', isInfo: false, height: 100 },
-    { label: 'Экран 2: Видео (низ)', role: 'VIDEO_BOTTOM', isInfo: false, height: 100 },
-    { label: 'Экран 3: Инфо', role: 'INFO', isInfo: true, height: 60 },
-  ],
-};
 
 interface VideoWallPreviewProps {
   layout: string;
@@ -38,7 +19,7 @@ export const VideoWallPreview = ({ layout, codes, onCodeChange }: VideoWallPrevi
   const [tempCode, setTempCode] = useState('');
   const [isChecking, setIsChecking] = useState(false);
 
-  const roles = LAYOUT_ROLES[layout] || LAYOUT_ROLES['3_v'];
+  const roles = getLayoutRoles(layout);
 
   const handleStartEdit = (role: string) => {
     setEditingRole(role);

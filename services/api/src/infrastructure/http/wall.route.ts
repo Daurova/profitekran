@@ -14,17 +14,14 @@ export async function wallRoutes(app: FastifyInstance) {
 
       const screen = await prisma.screen.findUnique({ where: { deviceId } });
 
-      // Если экран есть и принадлежит другому клиенту — ошибка
       if (screen && screen.tenantId !== tenantId) {
         return reply.status(403).send({ error: 'Этот экран уже привязан к другому клиенту' });
       }
 
-      // Если экран есть и уже в стене — ошибка
       if (screen && screen.wallId) {
         return reply.status(400).send({ error: 'Этот экран уже используется в другой медиастене' });
       }
 
-      // Если экрана нет в базе или он свободен — разрешаем (создадим при сборке)
       return { status: 'success', message: 'Экран свободен' };
     } catch (error) {
       app.log.error(error);
@@ -32,11 +29,11 @@ export async function wallRoutes(app: FastifyInstance) {
     }
   });
 
-  // 2. Создание Медиастены
+  // 2. Создание каркаса Медиастены (без контента)
   app.post('/walls', { preHandler: authPreHandler }, async (request, reply) => {
     try {
       const tenantId = (request as any).user.tenantId;
-      const { layout, screens, baseContent, infoContent, promoContent } = request.body as any;
+      const { layout, screens } = request.body as any;
 
       if (!layout || !screens) {
         return reply.status(400).send({ error: 'Нужны layoutType и screens' });
@@ -76,11 +73,10 @@ export async function wallRoutes(app: FastifyInstance) {
               data: {
                 wallId: newWall.id,
                 wallRole: role as WallRole,
-                tenantId, // привязываем к текущему тенанту
+                tenantId,
               },
             });
           } else {
-            // Если экрана нет в базе (телевизор новый), создаем его!
             await tx.screen.create({
               data: {
                 deviceId: code as string,
@@ -93,40 +89,6 @@ export async function wallRoutes(app: FastifyInstance) {
           }
         }
 
-        // Сохраняем Базовые видео
-        for (const v of baseContent.videos) {
-          await tx.videoWallItem.create({
-            data: {
-              wallId: newWall.id,
-              tenantId,
-              type: 'BASE',
-              url: v.url || 'temp-url',
-              durationSec: v.durationSec || 15,
-              orientation: v.orientation,
-              dayparts: v.dayparts,
-              qrUrl: infoContent?.qrUrl,
-              infoText: infoContent?.text,
-            },
-          });
-        }
-
-        // Сохраняем Рекламные видео
-        for (const v of promoContent) {
-          await tx.videoWallItem.create({
-            data: {
-              wallId: newWall.id,
-              tenantId,
-              type: v.type,
-              url: v.url || 'temp-url',
-              durationSec: v.durationSec || 15,
-              orientation: v.orientation,
-              dayparts: v.dayparts,
-              qrUrl: v.qrUrl,
-              infoText: v.infoText,
-            },
-          });
-        }
-
         return newWall;
       });
 
@@ -136,14 +98,69 @@ export async function wallRoutes(app: FastifyInstance) {
       return reply.status(500).send({ error: 'Ошибка создания стены' });
     }
   });
-    // 3. Получение списка стен
+
+  // 2.1. Добавление контента в стену
+  app.post('/walls/:id/content', { preHandler: authPreHandler }, async (request, reply) => {
+    try {
+      const tenantId = (request as any).user.tenantId;
+      const { id } = request.params as { id: string };
+      const { baseContent, infoContent, promoContent } = request.body as any;
+
+      const wall = await prisma.videoWall.findFirst({ where: { id, tenantId } });
+      if (!wall) return reply.status(404).send({ error: 'Стена не найдена' });
+
+      // Удаляем старый контент (если редактируем)
+      await prisma.videoWallItem.deleteMany({ where: { wallId: id } });
+
+      // Добавляем базовые видео
+      for (const v of baseContent.videos) {
+        await prisma.videoWallItem.create({
+          data: {
+            wallId: id,
+            tenantId,
+            type: 'BASE',
+            url: v.url,
+            durationSec: v.durationSec || 15,
+            orientation: v.orientation,
+            dayparts: v.dayparts,
+            qrUrl: infoContent?.qrUrl,
+            infoText: infoContent?.text,
+          },
+        });
+      }
+
+      // Добавляем рекламу
+      for (const v of promoContent) {
+        await prisma.videoWallItem.create({
+          data: {
+            wallId: id,
+            tenantId,
+            type: v.type,
+            url: v.url,
+            durationSec: v.durationSec || 15,
+            orientation: v.orientation,
+            dayparts: v.dayparts,
+            qrUrl: v.qrUrl,
+            infoText: v.infoText,
+          },
+        });
+      }
+
+      return { status: 'success' };
+    } catch (error) {
+      app.log.error(error);
+      return reply.status(500).send({ error: 'Ошибка сохранения контента' });
+    }
+  });
+
+  // 3. Получение списка стен
   app.get('/walls', { preHandler: authPreHandler }, async (request, reply) => {
     try {
       const walls = await prisma.videoWall.findMany({
         where: { tenantId: (request as any).user.tenantId },
         include: { 
-          screens: true, // Подтягиваем экраны
-          items: true    // Подтягиваем контент
+          screens: true,
+          items: true 
         },
         orderBy: { createdAt: 'desc' },
       });
