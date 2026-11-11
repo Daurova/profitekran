@@ -3,16 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Title, Text, Group, ActionIcon, Loader, Center, Button, Paper, Tabs } from '@mantine/core';
 import { IconArrowLeft, IconDeviceTv, IconClock } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
-import { notifications } from '@mantine/notifications';
-import { fetchWalls, saveWallContent } from '@/shared/api/client';
+import { fetchWalls } from '@/shared/api/client';
 import { BaseWallContent } from '@/features/video-wall/ui/BaseWallContent';
 import { PromoWallContent } from '@/features/video-wall/ui/PromoWallContent';
+import { useSaveWallContent } from '@/features/video-wall/ui/model/useSaveWallContent';
 
 export const VideoWallEditPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // Получаем данные стены
   const { data, isLoading } = useQuery({
     queryKey: ['walls'],
     queryFn: fetchWalls,
@@ -20,31 +19,25 @@ export const VideoWallEditPage = () => {
 
   const wall = data?.data.find((w: any) => w.id === id);
 
-  // Состояния для контента
   const [baseVideos, setBaseVideos] = useState<any[]>([]);
   const [infoData, setInfoData] = useState({ qrUrl: '', text: '' });
   const [promoVideos, setPromoVideos] = useState<any[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
+
+  const { save, isSaving } = useSaveWallContent(() => {
+    // После сохранения можно обновить кеш или остаться на странице
+  });
 
   if (isLoading) return <Center h="100vh"><Loader /></Center>;
   if (!wall) return <Text>Стена не найдена</Text>;
 
   const isVerticalWall = wall.layoutType.includes('VERTICAL');
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await saveWallContent(wall.id, {
-        baseContent: { videos: baseVideos },
-        infoContent: infoData,
-        promoContent: promoVideos,
-      });
-      notifications.show({ title: 'Успех', message: 'Контент сохранен', color: 'green' });
-    } catch (err) {
-      notifications.show({ title: 'Ошибка', message: 'Не удалось сохранить контент', color: 'red' });
-    } finally {
-      setIsSaving(false);
-    }
+  const handleSave = () => {
+    save(wall.id, {
+      baseContent: { videos: baseVideos },
+      infoContent: infoData,
+      promoContent: promoVideos,
+    });
   };
 
   return (
