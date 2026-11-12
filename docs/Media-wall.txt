@@ -326,3 +326,125 @@
 
 ---
 *Копируй этот текст. Как будешь готова продолжить, просто напиши «Продолжаем с БД для Медиастены».*
+
+Отлично! Наконец-то мы это сделали. Давай зафиксируем **максимально подробный контекст** со всеми путями, архитектурными решениями и подводными камнями, которые мы прошли.
+
+Сохрани этот текст в файл `PROJECT_CONTEXT.md` в корне проекта (папка `content`).
+
+---
+
+# 📦 МАКСИМАЛЬНО ПОДРОБНЫЙ КОНТЕКСТ ПРОЕКТА: «ВДОХНОВЕНИЕ» (TV PWA + API + Admin)
+
+## 🏗️ 1. ИНФРАСТРУКТУРА И ДЕПЛОЙ
+*   **Хостинг:** Reg.ru (VPS), IP: `5.63.155.125`, ОС: Ubuntu 24.04 (8.6 ГБ диска).
+*   **Домен:** `profitekran.online`. HTTPS (Certbot + Let's Encrypt).
+*   **Docker-контейнеры:** 
+    *   `profitekran-postgres-1` (PostgreSQL 16).
+    *   `profitekran-api-1` (Fastify + Prisma).
+    *   `profitekran-nginx-1` (Nginx).
+*   **CI/CD (GitHub Actions):** `.github/workflows/deploy.yml`.
+    *   **Триггер:** Пуш в `main`.
+    *   **Особенности:** 
+        *   Используется `git reset --hard origin/main` (чтобы избежать конфликтов на сервере).
+        *   Перед сборкой API удаляется старый образ: `docker rmi profitekran-api:latest || true`.
+        *   Сборка API: `docker compose ... build --no-cache api` (чтобы код точно обновился).
+        *   Удаление старого Nginx перед запуском (`stop nginx`, `rm -f nginx`), чтобы применились volume.
+        *   Перезапуск: `docker compose ... up -d --force-recreate`.
+    *   **Важно:** На сервере часто заканчивается место (`ENOSPC`). Перед деплоем нужно чистить: `docker system prune -a -f --volumes` и удалять `node_modules` на хосте.
+*   **Часовой пояс:** На сервере установлен `TZ: "Europe/Moscow"` (в `docker-compose.prod.yml`). Это критически важно для корректной генерации расписания.
+
+## 💻 2. ТЕХНОЛОГИЧЕСКИЙ СТЕК
+*   **Монорепозиторий:** `content`.
+    *   `apps/tv-pwa` (React, Vite, Mantine, FSD, PWA, IndexedDB).
+    *   `apps/admin` (React, Vite, Mantine, React Query, FSD).
+    *   `services/api` (Fastify, TypeScript, Prisma 7, PostgreSQL).
+*   **Файлы конфигурации:**
+    *   `content/docker-compose.prod.yml` — сборка контейнеров.
+    *   `content/nginx.conf` — конфиг Nginx (раздает PWA и Админку, проксирует API).
+    *   `content/services/api/Dockerfile` — добавлен `tzdata` (для часового пояса).
+
+## 🗄️ 3. БАЗА ДАННЫХ (Prisma)
+Файл: **`content/services/api/prisma/schema.prisma`**.
+*   **`Tenant` (Клиент):** `id`, `name`, `subscriptionEnd`, `isActive`.
+*   **`User` (Сотрудник):** `id`, `phone`, `role`, `otpCode`, `otpExpiresAt`, `tenantId`.
+*   **`Screen` (Экран):** `id`, `name`, `deviceId`, `isActive`, `tenantId`, `wallId` (связь со стеной), `wallRole` (Enum: `INFO`, `VIDEO_FULL` и т.д.), `syncStatus` (для офлайна).
+*   **`Content` (Видео):** `id`, `type` (BASE, ANCHOR, PROMO, OFFER, SERVICE), `url`, `durationSec`, `orientation`, `actionUrl`, `dayparts`, `tenantId`.
+*   **`VideoWall` (Медиастена):** `id`, `name`, `layoutType` (Enum: TWO_HORIZONTAL, TWO_VERTICAL, THREE_HORIZONTAL, THREE_VERTICAL), `tenantId`.
+*   **`VideoWallItem` (Контент стены):** `id`, `wallId`, `tenantId`, `type`, `url`, `durationSec`, `orientation`, `qrUrl`, `infoText`, `dayparts`.
+
+## 🏗️ 4. БЭКЕНД (API)
+Файлы в **`content/services/api/src/`**:
+*   **Роуты:**
+    *   **`infrastructure/http/auth.route.ts`:** Авторизация (SMS OTP), `/auth/me`, `/auth/logout`, `/tenant/name`.
+    *   **`infrastructure/http/playlist.route.ts`:** 
+        *   `GET /playlist?deviceId=...` — **Главная магия:** 
+            *   Для одиночных экранов: `generatePlaylistUseCase.execute(tenantId)`.
+            *   Для стены: генерирует **расписание (schedule)** с учетом Dayparts и таймкодов (`startTime`, `endTime`).
+            *   Для `INFO`-экрана отдает только QR-коды и текст.
+            *   Для `VIDEO`-экрана отдает видео с таймкодами.
+        *   `POST /upload`, `POST /add-video`, `GET /videos`, `DELETE /videos/:id`, `POST /screens`, `GET /screens`, `DELETE /screens/:id`.
+    *   **`infrastructure/http/wall.route.ts`:** 
+        *   `POST /walls/verify-screen` — проверка кода экрана при вводе (Big Tech Way).
+        *   `POST /walls` — создание каркаса стены.
+        *   `POST /walls/:id/content` — добавление контента в стену.
+        *   `GET /walls` — список стен.
+*   **Middlewares:** `infrastructure/http/middlewares/authPreHandler.ts` (проверка JWT из куки).
+*   **Репозитории:** `infrastructure/repositories/PrismaContentRepository.ts`.
+*   **S3:** `infrastructure/s3/S3Service.ts`.
+
+## 🖥️ 5. АДМИНКА (Vite)
+Файлы в **`content/apps/admin/src/`**:
+*   **Роутинг:** `App.tsx`. Роуты: `/login`, `/` (AdminPage), `/wall` (список стен), `/wall/:id` (редактирование стены).
+*   **Страницы:**
+    *   `screens/auth/ui/AuthPage.tsx` — вход (телефон -> код -> онбординг).
+    *   `screens/admin/ui/AdminPage.tsx` — сборка виджетов (шапка с кнопкой «Выйти», список экранов, загрузка видео, список видео).
+    *   `screens/video-wall/ui/VideoWallPage.tsx` — список стен и создание каркаса.
+    *   `screens/video-wall/ui/VideoWallEditPage.tsx` — наполнение стены (BaseWallContent, PromoWallContent).
+*   **Виджеты:**
+    *   `widgets/video-wall-preview/ui/VideoWallPreview.tsx` — интерактивная схема (клик -> ввод кода).
+    *   `widgets/screen-list/ui/ScreenList.tsx` — таблица одиночных экранов.
+    *   `widgets/video-list/ui/VideoList.tsx` — таблица видео.
+*   **Фичи:**
+    *   `features/bind-screen/ui/BindScreenForm.tsx` — привязка одиночного экрана.
+    *   `features/upload-video/ui/UploadButton.tsx` + `model/useUploadForm.ts` + `model/useUpload.ts`.
+    *   `features/video-wall/ui/BaseWallContent.tsx` — загрузка базовых видео и настройка Инфо-экрана.
+    *   `features/video-wall/ui/PromoWallContent.tsx` — загрузка рекламных видео.
+*   **Конфиг:** `shared/config/wall-layouts.ts` (роли для схем).
+*   **API-клиент:** `shared/api/client.ts` (все запросы, включая `createWall`, `saveWallContent`, `fetchWalls`).
+
+## 📺 6. ТЕЛЕВИЗОР (PWA)
+Файлы в **`content/apps/tv-pwa/src/`**:
+*   **`pages/home/HomePage.tsx`:**
+    *   Если `isWall && wallRole === 'INFO'` -> рендерит `<InfoScreen schedule={schedule} />`.
+    *   Если `isWall && schedule.length > 0` -> рендерит `<Player schedule={schedule} />`.
+    *   Иначе -> `<Player videos={videos} />` (одиночный экран).
+*   **`pages/home/model/usePlaylist.ts`:** 
+    *   Сохраняет `schedule` (для стены) или `videos` (для одиночного).
+    *   Поддерживает офлайн-кэш (`localStorage`).
+*   **`widgets/info-screen/ui/InfoScreen.tsx`:** 
+    *   Принимает `schedule`.
+    *   Каждую секунду вычисляет `Date.now()` и находит текущий слот в расписании.
+    *   Показывает часы, дату, QR-код и текст.
+*   **`widgets/player/Player.tsx`:**
+    *   Принимает `videos` или `schedule`.
+    *   Использует `useVideoPlayer({ videos, schedule })`.
+*   **`widgets/player/lib/useVideoPlayer.ts`:**
+    *   **Самая важная логика:** 
+        *   Если есть `schedule`, каждую секунду проверяет, не отстало ли видео от расписания (перематывает на `expectedSec`).
+        *   Watchdog (перезагрузка при зависании).
+        *   Кэширование в IndexedDB.
+
+## ⚠️ 7. ВАЖНЫЕ НЮАНСЫ (ЧТОБЫ НЕ НАСТУПИТЬ НА ГРАБЛИ)
+1.  **Часовой пояс:** Сервер и приставка должны работать в одном часовом поясе (MSK). На сервере это `TZ: "Europe/Moscow"`. Без этого расписание сдвигается на 3 часа.
+2.  **Место на диске:** Перед деплоем всегда проверяй `df -h`. Если места меньше 1 ГБ, сборка упадет с `ENOSPC`. Чисти `docker system prune` и удаляй `node_modules` на хосте.
+3.  **Prisma Client:** Если TypeScript ругается, что нет `PrismaClient`, выполни `npx prisma generate` в папке `services/api` на сервере.
+4.  **Кэш PWA:** После обновления кода на сервере, на телевизоре нужно очищать Service Worker (Application -> Service Workers -> Unregister) и Storage (Clear site data), иначе будет грузиться старый JS.
+5.  **Сборка API:** Флаг `--no-cache` не всегда помогает. Иногда нужно удалить образ вручную (`docker rmi profitekran-api:latest`).
+
+## ⏭️ 8. СЛЕДУЮЩИЕ ШАГИ
+1.  **Офлайн-скачивание:** Добавить в `Screen` поле `syncStatus` и кнопку в админке «Скачать плейлист». PWA будет скачивать видео в IndexedDB по этому флагу.
+2.  **Мультитенантность (SaaS):** Сделать так, чтобы каждый новый номер телефона создавал нового тенанта (сейчас привязка к первому).
+3.  **Биллинг:** Проверка `subscriptionEnd` перед показом.
+
+---
+*Копируй этот текст. Как будешь готова продолжить, просто напиши «Продолжаем с офлайн-скачивания» или «Продолжаем с контекста».*

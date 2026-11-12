@@ -12,6 +12,7 @@ model Tenant {
   name            String
   subscriptionEnd DateTime? 
   isActive        Boolean   @default(true)
+  playlistVersion Int       @default(1) // <-- ДОБАВИЛИ
   
   users           User[]
   screens         Screen[]
