@@ -1,5 +1,5 @@
 import { Box, Badge } from '@mantine/core';
-import { useFocusable } from '@noringmedia/norigin-spatial-navigation-react';
+import { useFocusable } from '@noriginmedia/norigin-spatial-navigation-react';
 import classes from './Player.module.css';
 import { type ContentItem } from '../../pages/home/HomePage';
 import { useVideoPlayer } from './lib/useVideoPlayer';
