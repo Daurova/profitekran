@@ -41,7 +41,7 @@ export const usePlaylist = () => {
         return true;
       }
 
-           // 2. Если это одиночный экран (пришел data)
+      // 2. Если это одиночный экран (пришел data)
       if (data.status === 'success' && data.data) {
         setIsUnauthorized(false);
         setIsWall(data.isWall || false);
@@ -56,7 +56,6 @@ export const usePlaylist = () => {
           console.log(`Версия плейлиста изменилась: ${cachedVersion} -> ${serverVersion}. Сбрасываем кэш...`);
           localStorage.setItem('playlist_version', String(serverVersion));
           
-          // Снимаем Service Worker и перезагружаем страницу
           if ('serviceWorker' in navigator) {
             const registrations = await navigator.serviceWorker.getRegistrations();
             for (const registration of registrations) {
@@ -64,7 +63,6 @@ export const usePlaylist = () => {
             }
           }
           
-          // Ждем чуть-чуть и перезагружаем
           setTimeout(() => window.location.reload(), 500);
           return true;
         }
@@ -106,6 +104,32 @@ export const usePlaylist = () => {
 
   useEffect(() => {
     load();
+  }, []);
+
+  // Слушаем сообщения от Service Worker (SWR)
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data.type === 'PLAYLIST_UPDATED') {
+          const serverVersion = event.data.playlistVersion;
+          const cachedVersion = Number(localStorage.getItem('playlist_version') || '1');
+          
+          if (serverVersion > cachedVersion) {
+            console.log('Service Worker: новая версия плейлиста! Перезагружаем...');
+            localStorage.setItem('playlist_version', String(serverVersion));
+            
+            navigator.serviceWorker.getRegistrations().then(regs => {
+              regs.forEach(reg => reg.unregister());
+            });
+            
+            setTimeout(() => window.location.reload(), 500);
+          }
+        }
+      };
+
+      navigator.serviceWorker.addEventListener('message', handleMessage);
+      return () => navigator.serviceWorker.removeEventListener('message', handleMessage);
+    }
   }, []);
 
   useEffect(() => {
