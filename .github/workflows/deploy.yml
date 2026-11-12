@@ -69,8 +69,7 @@ jobs:
             
             # 5. Перезапускаем Docker. Флаг --build заставит Docker пересобрать образ API с новыми миграциями!
             cd ../..
-            docker compose -f docker-compose.prod.yml up -d --build --force-recreate
-            
+            docker compose -f docker-compose.prod.yml up -d --build --force-recreate --no-cache            
             # Перечитываем конфиг Nginx (без простоя)
             docker exec profitekran-nginx-1 nginx -s reload
             
