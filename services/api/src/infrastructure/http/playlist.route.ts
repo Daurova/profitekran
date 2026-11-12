@@ -51,8 +51,9 @@ export async function playlistRoutes(app: FastifyInstance) {
 
         for (const daypart of dayparts) {
           const [startHour, endHour] = daypart.split('-').map(Number);
-          const daypartStartMs = startOfDay + startHour * 60 * 60 * 1000;
-          const daypartEndMs = startOfDay + endHour * 60 * 60 * 1000;
+          // Используем || 0, чтобы TS не ругался на undefined
+          const daypartStartMs = startOfDay + (startHour || 0) * 60 * 60 * 1000;
+          const daypartEndMs = startOfDay + (endHour || 0) * 60 * 60 * 1000;
           
           const activeItems = wallItems.filter(item => item.dayparts.includes(daypart));
           if (activeItems.length === 0) continue;
@@ -61,7 +62,8 @@ export async function playlistRoutes(app: FastifyInstance) {
           let itemIndex = 0;
 
           while (currentMs < daypartEndMs) {
-            const item = activeItems[itemIndex % activeItems.length];
+            // Восклицательный знак говорит TS, что item точно есть
+            const item = activeItems[itemIndex % activeItems.length]!;
             const durationMs = item.durationSec * 1000;
 
             schedule.push({
