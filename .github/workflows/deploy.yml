@@ -69,6 +69,10 @@ jobs:
             
             # 5. ПЕРЕСОБИРАЕМ ОБРАЗ API (без кэша, чтобы код точно обновился)
             cd ../..
+            # Удаляем старый образ API, чтобы Docker точно собрал новый
+            docker rmi profitekran-api:latest || true
+
+            # Собираем новый образ
             docker compose -f docker-compose.prod.yml build --no-cache api
             
             # 6. УДАЛЯЕМ СТАРЫЙ КОНТЕЙНЕР NGINX (чтобы volume применились)
