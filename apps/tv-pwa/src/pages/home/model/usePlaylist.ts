@@ -41,12 +41,33 @@ export const usePlaylist = () => {
         return true;
       }
 
-      // 2. Если это одиночный экран (пришел data)
+           // 2. Если это одиночный экран (пришел data)
       if (data.status === 'success' && data.data) {
         setIsUnauthorized(false);
         setIsWall(data.isWall || false);
         setWallRole(data.wallRole || null);
         setVideos(data.data);
+
+        // ПРОВЕРКА ВЕРСИИ ПЛЕЙЛИСТА
+        const serverVersion = data.playlistVersion || 1;
+        const cachedVersion = Number(localStorage.getItem('playlist_version') || '1');
+
+        if (serverVersion > cachedVersion) {
+          console.log(`Версия плейлиста изменилась: ${cachedVersion} -> ${serverVersion}. Сбрасываем кэш...`);
+          localStorage.setItem('playlist_version', String(serverVersion));
+          
+          // Снимаем Service Worker и перезагружаем страницу
+          if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (const registration of registrations) {
+              await registration.unregister();
+            }
+          }
+          
+          // Ждем чуть-чуть и перезагружаем
+          setTimeout(() => window.location.reload(), 500);
+          return true;
+        }
 
         localStorage.setItem('cached_playlist', JSON.stringify(data.data));
         localStorage.setItem('cached_is_wall', String(data.isWall || false));

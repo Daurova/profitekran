@@ -10,6 +10,8 @@ export const fetchPlaylist = async (deviceId: string): Promise<{
   infoText?: string; 
   qrUrl?: string;
   schedule?: any[];  
+  playlistVersion?: number; // <-- ДОБАВИЛИ
+
 }> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 3000);
