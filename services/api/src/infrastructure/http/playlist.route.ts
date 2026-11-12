@@ -42,31 +42,62 @@ export async function playlistRoutes(app: FastifyInstance) {
           orderBy: { createdAt: 'asc' }
         });
 
-        // Если это ИНФО-экран — отдаем настройки (текст и QR)
-        if (screen.wallRole === 'INFO') {
-          const infoData = wallItems.find(item => item.type === 'BASE') || wallItems[0];
+        // Генерируем расписание на сегодняшний день
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        
+        const schedule: any[] = [];
+        const dayparts = ['09-11', '11-14', '14-17', '17-20', '20-22'];
+
+        for (const daypart of dayparts) {
+          const [startHour, endHour] = daypart.split('-').map(Number);
+          const daypartStartMs = startOfDay + startHour * 60 * 60 * 1000;
+          const daypartEndMs = startOfDay + endHour * 60 * 60 * 1000;
           
+          const activeItems = wallItems.filter(item => item.dayparts.includes(daypart));
+          if (activeItems.length === 0) continue;
+
+          let currentMs = daypartStartMs;
+          let itemIndex = 0;
+
+          while (currentMs < daypartEndMs) {
+            const item = activeItems[itemIndex % activeItems.length];
+            const durationMs = item.durationSec * 1000;
+
+            schedule.push({
+              startTime: currentMs,
+              endTime: Math.min(currentMs + durationMs, daypartEndMs),
+              url: getVideoUrl(item.url),
+              qrUrl: item.qrUrl,
+              infoText: item.infoText,
+              type: item.type,
+            });
+
+            currentMs += durationMs;
+            itemIndex++;
+          }
+        }
+
+        if (screen.wallRole === 'INFO') {
           return {
             status: 'success',
             isWall: true,
             wallRole: 'INFO',
-            infoText: infoData?.infoText || 'Записаться',
-            qrUrl: infoData?.qrUrl || '',
+            schedule: schedule.map(s => ({
+              qrUrl: s.qrUrl,
+              infoText: s.infoText,
+              startTime: s.startTime,
+              endTime: s.endTime,
+            })),
           };
         }
-
-        // Если это ВИДЕО-экран — отдаем видео
-        const dataWithUrls = wallItems.map(item => ({
-          ...item,
-          url: getVideoUrl(item.url),
-        }));
 
         return { 
           status: 'success', 
           isWall: true,
           wallRole: screen.wallRole,
           wallLayout: screen.wall?.layoutType,
-          data: dataWithUrls 
+          schedule: schedule,
         };
       }
 
@@ -201,7 +232,7 @@ export async function playlistRoutes(app: FastifyInstance) {
   app.get('/screens', { preHandler: authPreHandler }, async (request, reply) => {
     try {
       const screens = await prisma.screen.findMany({
-        where: { tenantId: (request as any).user.tenantId, wallId: null }, // Только одиночные
+        where: { tenantId: (request as any).user.tenantId, wallId: null },
         orderBy: { name: 'asc' },
       });
       return { status: 'success', data: screens };

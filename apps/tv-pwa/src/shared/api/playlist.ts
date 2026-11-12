@@ -8,7 +8,8 @@ export const fetchPlaylist = async (deviceId: string): Promise<{
   isWall?: boolean;    
   wallRole?: string;
   infoText?: string; 
-  qrUrl?: string; 
+  qrUrl?: string;
+  schedule?: any[];  
 }> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 3000);

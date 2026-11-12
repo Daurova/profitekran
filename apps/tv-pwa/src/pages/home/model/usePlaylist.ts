@@ -5,14 +5,11 @@ import { type ContentItem } from '../HomePage';
 
 export const usePlaylist = () => {
   const [videos, setVideos] = useState<ContentItem[]>([]);
+  const [schedule, setSchedule] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUnauthorized, setIsUnauthorized] = useState(false);
   const [isWall, setIsWall] = useState(false);
   const [wallRole, setWallRole] = useState<string | null>(null);
-  
-  // ДОБАВИЛИ: стейты для инфо-экрана
-  const [infoText, setInfoText] = useState<string>('');
-  const [qrUrl, setQrUrl] = useState<string>('');
 
   const load = async (): Promise<boolean> => {
     try {
@@ -22,34 +19,34 @@ export const usePlaylist = () => {
       if (data.status === 'unauthorized') {
         setIsUnauthorized(true);
         setVideos([]);
+        setSchedule([]);
         localStorage.removeItem('cached_playlist');
+        localStorage.removeItem('cached_schedule');
         setIsLoading(false);
         return false;
       }
 
-      // Если это инфо-экран (нет data, но есть infoText)
-      if (data.status === 'success' && data.isWall && data.wallRole === 'INFO') {
+      // 1. Если это стена (пришел schedule)
+      if (data.status === 'success' && data.schedule) {
         setIsUnauthorized(false);
         setIsWall(true);
-        setWallRole('INFO');
-        setInfoText(data.infoText || '');
-        setQrUrl(data.qrUrl || '');
-
-        localStorage.setItem('cached_is_wall', 'true');
-        localStorage.setItem('cached_wall_role', 'INFO');
-        localStorage.setItem('cached_info_text', data.infoText || '');
-        localStorage.setItem('cached_qr_url', data.qrUrl || '');
-        
+        setWallRole(data.wallRole || null);
+        setSchedule(data.schedule);
         setIsLoading(false);
+
+        localStorage.setItem('cached_schedule', JSON.stringify(data.schedule));
+        localStorage.setItem('cached_is_wall', 'true');
+        localStorage.setItem('cached_wall_role', data.wallRole || '');
+
         return true;
       }
 
-      // Если это видео-экран (или одиночный)
+      // 2. Если это одиночный экран (пришел data)
       if (data.status === 'success' && data.data) {
         setIsUnauthorized(false);
-        setVideos(data.data);
         setIsWall(data.isWall || false);
         setWallRole(data.wallRole || null);
+        setVideos(data.data);
 
         localStorage.setItem('cached_playlist', JSON.stringify(data.data));
         localStorage.setItem('cached_is_wall', String(data.isWall || false));
@@ -65,25 +62,18 @@ export const usePlaylist = () => {
         return true;
       }
     } catch (err) {
-      // При ошибке сети (если нет интернета) берем кэш
-      const cached = localStorage.getItem('cached_playlist');
-      const cachedIsWall = localStorage.getItem('cached_is_wall') === 'true';
-      const cachedRole = localStorage.getItem('cached_wall_role');
+      // Офлайн-режим: пытаемся взять из кэша
+      const cachedSchedule = localStorage.getItem('cached_schedule');
+      const cachedPlaylist = localStorage.getItem('cached_playlist');
 
-      if (cachedIsWall && cachedRole === 'INFO') {
-        setInfoText(localStorage.getItem('cached_info_text') || '');
-        setQrUrl(localStorage.getItem('cached_qr_url') || '');
+      if (cachedSchedule) {
+        setSchedule(JSON.parse(cachedSchedule));
         setIsWall(true);
-        setWallRole('INFO');
-      } else if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed.length > 0) {
-          setVideos(parsed);
-          setIsWall(cachedIsWall);
-          setWallRole(cachedRole);
-        } else {
-          setIsUnauthorized(true);
-        }
+        setWallRole(localStorage.getItem('cached_wall_role'));
+      } else if (cachedPlaylist) {
+        setVideos(JSON.parse(cachedPlaylist));
+        setIsWall(localStorage.getItem('cached_is_wall') === 'true');
+        setWallRole(localStorage.getItem('cached_wall_role'));
       } else {
         setIsUnauthorized(true);
       }
@@ -108,5 +98,5 @@ export const usePlaylist = () => {
     return () => clearInterval(interval);
   }, [isUnauthorized]);
 
-  return { videos, isLoading, isUnauthorized, isWall, wallRole, infoText, qrUrl };
+  return { videos, schedule, isLoading, isUnauthorized, isWall, wallRole };
 };
