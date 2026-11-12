@@ -51,7 +51,6 @@ export async function playlistRoutes(app: FastifyInstance) {
 
         for (const daypart of dayparts) {
           const [startHour, endHour] = daypart.split('-').map(Number);
-          // Используем || 0, чтобы TS не ругался на undefined
           const daypartStartMs = startOfDay + (startHour || 0) * 60 * 60 * 1000;
           const daypartEndMs = startOfDay + (endHour || 0) * 60 * 60 * 1000;
           
@@ -62,7 +61,6 @@ export async function playlistRoutes(app: FastifyInstance) {
           let itemIndex = 0;
 
           while (currentMs < daypartEndMs) {
-            // Восклицательный знак говорит TS, что item точно есть
             const item = activeItems[itemIndex % activeItems.length]!;
             const durationMs = item.durationSec * 1000;
 
@@ -105,7 +103,16 @@ export async function playlistRoutes(app: FastifyInstance) {
 
       // 2. Если одиночный экран — генерируем обычный плейлист
       const playlist = await generatePlaylistUseCase.execute(screen.tenantId);
-      return { status: 'success', isWall: false, data: playlist };
+      
+      // Получаем версию плейлиста
+      const tenant = await prisma.tenant.findUnique({ where: { id: screen.tenantId } });
+      
+      return { 
+        status: 'success', 
+        isWall: false, 
+        playlistVersion: tenant?.playlistVersion || 1, // <-- ДОБАВИЛИ
+        data: playlist 
+      };
     } catch (error) {
       app.log.error(error);
       return reply.status(500).send({ status: 'error', message: error instanceof Error ? error.message : 'Unknown error' });
@@ -166,10 +173,11 @@ export async function playlistRoutes(app: FastifyInstance) {
         },
       });
 
-        await prisma.tenant.update({
+      await prisma.tenant.update({
         where: { id: (request as any).user.tenantId },
         data: { playlistVersion: { increment: 1 } },
       });
+
       return { status: 'success', content };
     } catch (error) {
       app.log.error(error);
@@ -207,12 +215,12 @@ export async function playlistRoutes(app: FastifyInstance) {
 
       await deleteVideo(content.url);
       await prisma.content.delete({ where: { id } });
-            // Обновляем версию плейлиста
+
       await prisma.tenant.update({
         where: { id: userTenantId },
         data: { playlistVersion: { increment: 1 } },
       });
-      
+
       return { status: 'success' };
     } catch (error) {
       app.log.error(error);
