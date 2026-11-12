@@ -176,6 +176,7 @@ export const forceUpdatePlaylist = async () => {
   const res = await fetch(`${API_URL}/tenant/increment-version`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}), // <-- ДОБАВИЛИ ПУСТОЙ ОБЪЕКТ
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Ошибка обновления');
