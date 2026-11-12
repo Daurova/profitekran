@@ -9,7 +9,8 @@ import { useNavigate } from 'react-router-dom';
 import { logout } from '@/shared/api/client';
 import { IconLayoutGrid, IconLogout } from '@tabler/icons-react';
 import { ScreenList } from '@/widgets/screen-list/ui/ScreenList';
-
+import { forceUpdatePlaylist } from '@/shared/api/client';
+import { IconRefresh } from '@tabler/icons-react';
 
 export const AdminPage = () => {
   const queryClient = useQueryClient();
@@ -34,6 +35,22 @@ export const AdminPage = () => {
     navigate('/login');
   };
 
+    const handleForceUpdate = async () => {
+    try {
+      await forceUpdatePlaylist();
+      notifications.show({ 
+        title: 'Успех', 
+        message: 'Команда обновления отправлена. Перезагрузите ТВ или подождите 5 минут.', 
+        color: 'green' 
+      });
+    } catch (err) {
+      notifications.show({ 
+        title: 'Ошибка', 
+        message: 'Не удалось отправить команду', 
+        color: 'red' 
+      });
+    }
+  };
   return (
     <Container size="lg" py="xl">
       <Group justify="space-between" mb="xl">
@@ -53,6 +70,7 @@ export const AdminPage = () => {
         <Button variant="light" color="red" leftSection={<IconLogout size={16} />} onClick={handleLogout}>
             Выйти
         </Button>
+
       </Group>
       
       <Stack gap="xl">
@@ -65,6 +83,13 @@ export const AdminPage = () => {
 
         {/* Список видео */}
         <VideoList />
+                  <Button 
+            variant="light" 
+            leftSection={<IconRefresh size={16} />} 
+            onClick={handleForceUpdate}
+          >
+            Обновить контент на ТВ
+          </Button>
       </Stack>
     </Container>
   );

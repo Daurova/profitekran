@@ -110,7 +110,7 @@ export async function playlistRoutes(app: FastifyInstance) {
       return { 
         status: 'success', 
         isWall: false, 
-        playlistVersion: tenant?.playlistVersion || 1, // <-- ДОБАВИЛИ
+        playlistVersion: tenant?.playlistVersion || 1,
         data: playlist 
       };
     } catch (error) {
@@ -173,11 +173,6 @@ export async function playlistRoutes(app: FastifyInstance) {
         },
       });
 
-      await prisma.tenant.update({
-        where: { id: (request as any).user.tenantId },
-        data: { playlistVersion: { increment: 1 } },
-      });
-
       return { status: 'success', content };
     } catch (error) {
       app.log.error(error);
@@ -215,11 +210,6 @@ export async function playlistRoutes(app: FastifyInstance) {
 
       await deleteVideo(content.url);
       await prisma.content.delete({ where: { id } });
-
-      await prisma.tenant.update({
-        where: { id: userTenantId },
-        data: { playlistVersion: { increment: 1 } },
-      });
 
       return { status: 'success' };
     } catch (error) {
@@ -281,6 +271,20 @@ export async function playlistRoutes(app: FastifyInstance) {
     } catch (error) {
       app.log.error(error);
       return reply.status(500).send({ error: 'Ошибка удаления экрана' });
+    }
+  });
+    // Принудительное обновление плейлиста
+  app.post('/tenant/increment-version', { preHandler: authPreHandler }, async (request, reply) => {
+    try {
+      const tenantId = (request as any).user.tenantId;
+      await prisma.tenant.update({
+        where: { id: tenantId },
+        data: { playlistVersion: { increment: 1 } },
+      });
+      return { status: 'success' };
+    } catch (error) {
+      app.log.error(error);
+      return reply.status(500).send({ error: 'Ошибка обновления версии' });
     }
   });
 }

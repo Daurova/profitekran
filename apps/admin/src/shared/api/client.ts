@@ -171,3 +171,13 @@ export const saveWallContent = async (wallId: string, data: any) => {
   if (!res.ok) throw new Error('Ошибка сохранения контента');
   return res.json();
 };
+
+export const forceUpdatePlaylist = async () => {
+  const res = await fetch(`${API_URL}/tenant/increment-version`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Ошибка обновления');
+  return res.json();
+};
