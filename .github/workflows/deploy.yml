@@ -71,13 +71,17 @@ jobs:
             cd ../..
             docker compose -f docker-compose.prod.yml build --no-cache api
             
-            # 6. ЗАПУСКАЕМ КОНТЕЙНЕРЫ
+            # 6. УДАЛЯЕМ СТАРЫЙ КОНТЕЙНЕР NGINX (чтобы volume применились)
+            docker compose -f docker-compose.prod.yml stop nginx || true
+            docker compose -f docker-compose.prod.yml rm -f nginx || true
+            
+            # 7. ЗАПУСКАЕМ КОНТЕЙНЕРЫ
             docker compose -f docker-compose.prod.yml up -d --force-recreate
             
-            # 7. Перечитываем конфиг Nginx
+            # 8. Перечитываем конфиг Nginx
             docker exec profitekran-nginx-1 nginx -s reload
             
-            # 8. Ждем API и применяем миграции
+            # 9. Ждем API и применяем миграции
             echo "Waiting for API..."
             sleep 10
             docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
