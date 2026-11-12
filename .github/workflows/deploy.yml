@@ -67,15 +67,17 @@ jobs:
             npm install
             npm run build
             
-            # 5. Перезапускаем Docker. Флаг --build заставит Docker пересобрать образ API с новыми миграциями!
+            # 5. ПЕРЕСОБИРАЕМ ОБРАЗ API (без кэша, чтобы код точно обновился)
             cd ../..
-            docker compose -f docker-compose.prod.yml up -d --build --force-recreate --no-cache            
-            # Перечитываем конфиг Nginx (без простоя)
+            docker compose -f docker-compose.prod.yml build --no-cache api
+            
+            # 6. ЗАПУСКАЕМ КОНТЕЙНЕРЫ
+            docker compose -f docker-compose.prod.yml up -d --force-recreate
+            
+            # 7. Перечитываем конфиг Nginx
             docker exec profitekran-nginx-1 nginx -s reload
             
-            # 6. Ждем API и применяем миграции
+            # 8. Ждем API и применяем миграции
             echo "Waiting for API..."
             sleep 10
-            
-            # 7. Применяем миграции
             docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
