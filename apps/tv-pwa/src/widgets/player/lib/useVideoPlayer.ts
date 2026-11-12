@@ -17,20 +17,16 @@ export const useVideoPlayer = ({ videos, schedule }: UseVideoPlayerParams) => {
   let currentVideo: any = null;
   
   if (schedule && schedule.length > 0) {
-    // РЕЖИМ СТЕНЫ: ищем видео по текущему времени
     const now = Date.now();
-    // Находим текущий слот (если сейчас 00:00, а слот начинается в 09:00, мы просто ждем)
     const currentSlot = schedule.find(s => now >= s.startTime && now < s.endTime);
-    
     if (currentSlot) {
       currentVideo = {
         url: currentSlot.url,
         type: currentSlot.type,
-        id: currentSlot.startTime.toString(), // Временный ID
+        id: currentSlot.startTime.toString(),
       };
     }
   } else if (videos && videos.length > 0) {
-    // ОБЫЧНЫЙ РЕЖИМ: играем по индексу
     currentVideo = videos[currentIndex];
   }
 
@@ -40,7 +36,6 @@ export const useVideoPlayer = ({ videos, schedule }: UseVideoPlayerParams) => {
       const video = videoRef.current;
       if (!video || !currentVideo) return;
 
-      // Проверяем, не тот же ли это файл, что уже играет
       if (video.src && video.src.includes(currentVideo.url)) return;
 
       const cachedBlob = await getVideo(currentVideo.url);
@@ -50,7 +45,6 @@ export const useVideoPlayer = ({ videos, schedule }: UseVideoPlayerParams) => {
       } else {
         video.src = currentVideo.url;
         
-        // Скачиваем в фоне
         fetch(currentVideo.url)
           .then(res => res.blob())
           .then(blob => saveVideo(currentVideo.url, blob))
@@ -75,10 +69,7 @@ export const useVideoPlayer = ({ videos, schedule }: UseVideoPlayerParams) => {
       const currentSlot = schedule.find(s => now >= s.startTime && now < s.endTime);
 
       if (currentSlot) {
-        // Вычисляем, на какой секунде должно быть видео
         const expectedSec = (now - currentSlot.startTime) / 1000;
-        
-        // Если видео отстало или убежало больше чем на 2 секунды — принудительно перематываем
         if (Math.abs(video.currentTime - expectedSec) > 2) {
           video.currentTime = expectedSec;
         }
@@ -129,10 +120,38 @@ export const useVideoPlayer = ({ videos, schedule }: UseVideoPlayerParams) => {
     if (timeLeft < 0.8) setIsCurtainClosed(true);
   };
 
-  // 6. Переключение (для обычного режима)
-  const handleEnded = () => {
+  // 6. Переключение (для обычного режима) + ПРОВЕРКА ВЕРСИИ
+  const handleEnded = async () => {
     if (videos && videos.length > 0) {
       setCurrentIndex((prev) => (prev + 1) % videos.length);
+    }
+
+    // ПРОВЕРКА ВЕРСИИ ПЛЕЙЛИСТА (для одиночных экранов)
+    if (!schedule || schedule.length === 0) {
+      try {
+        const deviceId = localStorage.getItem('device_id');
+        if (!deviceId) return;
+
+        const res = await fetch(`/api/playlist?deviceId=${deviceId}`);
+        const data = await res.json();
+
+        if (data.playlistVersion) {
+          const cachedVersion = Number(localStorage.getItem('playlist_version') || '1');
+          if (data.playlistVersion > cachedVersion) {
+            console.log('Новая версия плейлиста! Перезагружаем...');
+            localStorage.setItem('playlist_version', String(data.playlistVersion));
+            
+            if ('serviceWorker' in navigator) {
+              const regs = await navigator.serviceWorker.getRegistrations();
+              for (const reg of regs) await reg.unregister();
+            }
+            
+            window.location.reload();
+          }
+        }
+      } catch (e) {
+        // Если ошибка сети, просто игнорируем
+      }
     }
   };
 
