@@ -166,6 +166,10 @@ export async function playlistRoutes(app: FastifyInstance) {
         },
       });
 
+        await prisma.tenant.update({
+        where: { id: (request as any).user.tenantId },
+        data: { playlistVersion: { increment: 1 } },
+      });
       return { status: 'success', content };
     } catch (error) {
       app.log.error(error);
@@ -203,7 +207,12 @@ export async function playlistRoutes(app: FastifyInstance) {
 
       await deleteVideo(content.url);
       await prisma.content.delete({ where: { id } });
-
+            // Обновляем версию плейлиста
+      await prisma.tenant.update({
+        where: { id: userTenantId },
+        data: { playlistVersion: { increment: 1 } },
+      });
+      
       return { status: 'success' };
     } catch (error) {
       app.log.error(error);
