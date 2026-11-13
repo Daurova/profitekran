@@ -448,3 +448,114 @@
 
 ---
 *Копируй этот текст. Как будешь готова продолжить, просто напиши «Продолжаем с офлайн-скачивания» или «Продолжаем с контекста».*
+Вот **максимально подробный контекст**, разделенный на две части: **Одиночные экраны** и **Видеостена**, с указанием всех папок, файлов и архитектурных решений, которые мы приняли.
+
+Сохрани этот текст в файл `PROJECT_CONTEXT_DETAILED.md` в корне проекта.
+
+---
+
+# 📦 КОНТЕКСТ ПРОЕКТА: «ВДОХНОВЕНИЕ» (ДЕТАЛЬНЫЙ)
+
+## 🏗️ 0. ИНФРАСТРУКТУРА И ДЕПЛОЙ (ОБЩЕЕ)
+*   **Сервер:** Reg.ru (Ubuntu 24.04), IP `5.63.155.125`. Часовой пояс: **Europe/Moscow** (через `TZ` в `docker-compose.prod.yml`).
+*   **CI/CD:** `.github/workflows/deploy.yml`. 
+    *   Сборка API: `docker rmi ... || true` (удаляем старый образ), затем `docker compose build --no-cache api`.
+    *   Пересоздание Nginx: `stop nginx`, `rm -f nginx`, `up -d --force-recreate`.
+*   **Важно:** На сервере часто заканчивается место. Перед деплоем чисти `docker system prune -a -f --volumes` и удаляй `node_modules` на хосте.
+
+---
+
+# 📺 ЧАСТЬ 1: ОДИНОЧНЫЕ ЭКРАНЫ (TV PWA)
+
+## 🗄️ 1. База данных (Prisma)
+*   **`Tenant`:** `id`, `name`, `subscriptionEnd`, `isActive`, **`playlistVersion`** (Int, default 1).
+*   **`Screen`:** `id`, `name`, `deviceId`, `isActive`, `tenantId`, `wallId` (null для одиночных).
+*   **`Content`:** `id`, `type` (BASE, ANCHOR, PROMO, OFFER, SERVICE), `url`, `durationSec`, `orientation`, `actionUrl`, `dayparts`, `tenantId`.
+
+## 🏗️ 2. Бэкенд (API)
+Файлы в **`content/services/api/src/`**:
+*   **`auth.route.ts`:** Авторизация (SMS OTP), `/auth/me`, `/auth/logout`, `/tenant/name`, **`POST /tenant/increment-version`** (кнопка обновления).
+*   **`playlist.route.ts`:**
+    *   `GET /playlist?deviceId=...` — генерирует плейлист для одиночного экрана. Возвращает `data: ContentItem[]` и **`playlistVersion`**.
+    *   `POST /upload`, `POST /add-video`, `GET /videos`, `DELETE /videos/:id`.
+*   **`AuthService.ts`:** При регистрации нового номера создает **нового тенанта** (`newTenant.id`) и привязывает пользователя к нему.
+
+## 🖥️ 3. Админка (Vite)
+Файлы в **`content/apps/admin/src/`**:
+*   **`AdminPage.tsx`:** Кнопка **«Обновить контент на ТВ»** (вызывает `POST /tenant/increment-version`).
+*   **`UploadButton.tsx`** и **`useUploadForm.ts`:** Загрузка видео (в S3 + в базу).
+*   **`VideoList.tsx`:** Таблица видео.
+*   **`client.ts`:** `forceUpdatePlaylist()` (для кнопки).
+
+## 📺 4. Телевизор (PWA)
+Файлы в **`content/apps/tv-pwa/src/`**:
+*   **`usePlaylist.ts`:** 
+    *   Загружает плейлист (`videos`).
+    *   Сохраняет `playlistVersion` в `localStorage`.
+    *   Слушает сообщения от Service Worker (`PLAYLIST_UPDATED`).
+    *   При новой версии — сбрасывает Service Worker и перезагружается.
+*   **`useVideoPlayer.ts`:** 
+    *   Играет видео из IndexedDB или сети.
+    *   В `handleEnded` (при окончании видео) делает запрос на `/api/playlist` и сравнивает `playlistVersion`. Если версия больше — перезагружается.
+*   **`sw.ts`:** 
+    *   Кэширует видео (`CacheFirst`).
+    *   Для `/playlist` использует **Stale-While-Revalidate**.
+    *   **`cacheDidUpdate`**: при обновлении кэша отправляет сообщение `PLAYLIST_UPDATED` с новой версией.
+
+---
+
+# 🎥 ЧАСТЬ 2: ВИДЕОСТЕНА (VIDEO WALL)
+
+## 🗄️ 1. База данных (Prisma)
+*   **`VideoWall`:** `id`, `name`, `layoutType` (Enum: TWO_HORIZONTAL, TWO_VERTICAL, THREE_HORIZONTAL, THREE_VERTICAL), `tenantId`.
+*   **`VideoWallItem`:** `id`, `wallId`, `tenantId`, `type` (BASE, PROMO, OFFER, SERVICE), `url`, `durationSec`, `orientation`, `qrUrl`, `infoText`, `dayparts`.
+*   **`Screen`:** Добавлены поля `wallId` (связь) и `wallRole` (Enum: INFO, VIDEO_FULL, VIDEO_TOP, VIDEO_BOTTOM, VIDEO_LEFT, VIDEO_RIGHT).
+
+## 🏗️ 2. Бэкенд (API)
+Файлы в **`content/services/api/src/`**:
+*   **`wall.route.ts`:**
+    *   `POST /walls/verify-screen` — проверка кода (при вводе).
+    *   `POST /walls` — создание каркаса стены.
+    *   `POST /walls/:id/content` — сохранение контента (базовые видео + реклама). **Обновляет `playlistVersion`**.
+    *   `GET /walls` — список стен.
+    *   `GET /walls/:id/content` — **загрузка сохраненного контента** (для отображения в админке).
+*   **`playlist.route.ts` (блок для стены):**
+    *   Генерирует **`schedule`** (расписание) на сегодня с учетом Dayparts.
+    *   Для `INFO`-экрана: отдает `schedule` с `qrUrl` и `infoText`, а также **`playlistVersion`**.
+    *   Для `VIDEO`-экрана: отдает `schedule` с `url` видео и **`playlistVersion`**.
+
+## 🖥️ 3. Админка (Vite)
+Файлы в **`content/apps/admin/src/`**:
+*   **`VideoWallPage.tsx`:** Список стен + форма создания каркаса (выбор схемы, ввод кодов).
+*   **`VideoWallEditPage.tsx`:** 
+    *   Загружает контент стены через `fetchWallContent(wallId)`.
+    *   Отображает список сохраненных видео в `BaseWallContent` и `PromoWallContent`.
+    *   Сохраняет контент через `useSaveWallContent` (загрузка в S3 + `saveWallContent`).
+*   **`useSaveWallContent.ts`:** Хук для загрузки видео в S3 и сохранения контента стены.
+*   **`BaseWallContent.tsx`:** Форма загрузки базовых видео (с общим QR-кодом).
+*   **`PromoWallContent.tsx`:** Форма загрузки рекламы (с индивидуальными QR-кодами).
+
+## 📺 4. Телевизор (PWA)
+Файлы в **`content/apps/tv-pwa/src/`**:
+*   **`usePlaylist.ts`:** 
+    *   Сохраняет `schedule` и `playlistVersion` (для стены).
+    *   Слушает `PLAYLIST_UPDATED` (но для стены перезагрузка происходит через `InfoScreen` или при смене слота).
+*   **`InfoScreen.tsx`:** 
+    *   Принимает `schedule`.
+    *   Каждую секунду ищет текущий слот и показывает QR-код и текст.
+    *   При смене слота (раз в 10 секунд) проверяет `playlistVersion`. Если версия больше — перезагружается.
+*   **`Player.tsx`:** 
+    *   Для стены принимает `schedule` и играет видео по таймкодам.
+    *   Принудительно перематывает видео, если оно отстало от расписания.
+    *   Показывает заглушку «Ожидание эфира», если нет текущего слота.
+
+---
+
+## ⚠️ ВАЖНЫЕ НЮАНСЫ ДЛЯ ОБЕИХ ЧАСТЕЙ
+1.  **Часовой пояс:** Сервер и приставка должны работать в MSK (`TZ: "Europe/Moscow"`).
+2.  **Версионирование:** При любом изменении контента (видео или стены) увеличивается `playlistVersion` (вручную через кнопку или автоматически при сохранении стены).
+3.  **Кэш:** Service Worker кэширует видео и `/playlist`. Для обновления используется **Stale-While-Revalidate** и отправка сообщения `PLAYLIST_UPDATED`.
+4.  **Скачивание:** Видео скачиваются в IndexedDB «на лету» при первом показе. Для полного офлайна нужно добавить фоновое скачивание всех видео из расписания.
+
+---
+*Копируй этот текст. Как будешь готова продолжить, просто напиши «Продолжаем с офлайн-скачивания» или «Продолжаем с контекста».*
