@@ -17,7 +17,7 @@ services:
       DATABASE_URL: "postgresql://admin:super_secret_password@postgres:5432/tv_platform?schema=public"
       PORT: 4000
       TZ: "Europe/Moscow"
-      SMS_API_KEY: "${SMS_API_KEY}" # <-- ДОБАВИЛИ
+      SMS_API_KEY: "${SMS_API_KEY}" 
       S3_ENDPOINT: "${S3_ENDPOINT}"
       S3_REGION: "ru-1"
       S3_BUCKET: "${S3_BUCKET}"
