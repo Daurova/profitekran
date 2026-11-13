@@ -182,3 +182,12 @@ export const forceUpdatePlaylist = async () => {
   if (!res.ok) throw new Error('Ошибка обновления');
   return res.json();
 };
+
+export const fetchWallContent = async (wallId: string) => {
+  const res = await fetch(`${API_URL}/walls/${wallId}/content`, {
+    headers: getAuthHeaders(),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Ошибка загрузки контента стены');
+  return res.json();
+};

@@ -1,33 +1,78 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Title, Text, Group, ActionIcon, Loader, Center, Button, Paper, Tabs } from '@mantine/core';
 import { IconArrowLeft, IconDeviceTv, IconClock } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchWalls } from '@/shared/api/client';
+import { fetchWalls, fetchWallContent } from '@/shared/api/client';
+import { useSaveWallContent } from '@/features/video-wall/model/useSaveWallContent';
 import { BaseWallContent } from '@/features/video-wall/ui/BaseWallContent';
 import { PromoWallContent } from '@/features/video-wall/ui/PromoWallContent';
-import { useSaveWallContent } from '@/features/video-wall/ui/model/useSaveWallContent';
 
 export const VideoWallEditPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const { data, isLoading } = useQuery({
+  // Загружаем данные стены
+  const { data: wallsData, isLoading: isWallsLoading } = useQuery({
     queryKey: ['walls'],
     queryFn: fetchWalls,
   });
 
-  const wall = data?.data.find((w: any) => w.id === id);
+  // Загружаем контент стены
+  const { data: contentData, isLoading: isContentLoading } = useQuery({
+    queryKey: ['wall-content', id],
+    queryFn: () => fetchWallContent(id!),
+    enabled: !!id,
+  });
+
+  const wall = wallsData?.data.find((w: any) => w.id === id);
 
   const [baseVideos, setBaseVideos] = useState<any[]>([]);
   const [infoData, setInfoData] = useState({ qrUrl: '', text: '' });
   const [promoVideos, setPromoVideos] = useState<any[]>([]);
 
   const { save, isSaving } = useSaveWallContent(() => {
-    // После сохранения можно обновить кеш или остаться на странице
+    // После сохранения можно обновить кеш
   });
 
-  if (isLoading) return <Center h="100vh"><Loader /></Center>;
+  // Заполняем стейты данными из базы
+  useEffect(() => {
+    if (contentData?.data) {
+      const items = contentData.data;
+      
+      const bases = items.filter((i: any) => i.type === 'BASE');
+      const promos = items.filter((i: any) => i.type !== 'BASE');
+      
+      setBaseVideos(bases.map((b: any) => ({
+        id: b.id,
+        url: b.url,
+        durationSec: b.durationSec,
+        orientation: b.orientation,
+        dayparts: b.dayparts,
+        type: 'BASE'
+      })));
+
+      setPromoVideos(promos.map((p: any) => ({
+        id: p.id,
+        url: p.url,
+        durationSec: p.durationSec,
+        orientation: p.orientation,
+        dayparts: p.dayparts,
+        type: p.type,
+        qrUrl: p.qrUrl || '',
+        infoText: p.infoText || ''
+      })));
+
+      if (bases.length > 0) {
+        setInfoData({
+          qrUrl: bases[0].qrUrl || '',
+          text: bases[0].infoText || ''
+        });
+      }
+    }
+  }, [contentData]);
+
+  if (isWallsLoading || isContentLoading) return <Center h="100vh"><Loader /></Center>;
   if (!wall) return <Text>Стена не найдена</Text>;
 
   const isVerticalWall = wall.layoutType.includes('VERTICAL');

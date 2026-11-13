@@ -176,4 +176,23 @@ export async function wallRoutes(app: FastifyInstance) {
       return reply.status(500).send({ error: 'Ошибка получения списка стен' });
     }
   });
+
+    // 4. Получение контента стены
+  app.get('/walls/:id/content', { preHandler: authPreHandler }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const tenantId = (request as any).user.tenantId;
+
+      const items = await prisma.videoWallItem.findMany({
+        where: { wallId: id, tenantId },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      return { status: 'success', data: items };
+    } catch (error) {
+      app.log.error(error);
+      return reply.status(500).send({ error: 'Ошибка получения контента стены' });
+    }
+  });
 }
+
