@@ -432,3 +432,97 @@ code src/pages/home/HomePage.tsx
 
 ---
 *Копируй этот текст. Как будешь готова продолжить, просто напиши «Продолжаем с универсального якоря» или «Продолжаем с контекста».*
+
+Вот **максимально подробный контекст** проекта на текущий момент. Со всеми путями, архитектурными решениями и теми граблями, на которые мы наступили. Сохрани его в файл `PROJECT_CONTEXT.md` в корне проекта (папка `content`).
+
+---
+
+# 📦 МАКСИМАЛЬНО ПОДРОБНЫЙ КОНТЕКСТ ПРОЕКТА: «ВДОХНОВЕНИЕ» (TV PWA + API + Admin)
+
+## 🏗️ 1. ИНФРАСТРУКТУРА И ДЕПЛОЙ
+*   **Сервер (VPS):** Reg.ru (Ubuntu 24.04), IP `5.63.155.125`, 8.6 ГБ диска. **Важно:** места часто не хватает, перед деплоем надо чистить `docker system prune -a -f --volumes`.
+*   **Домен:** `profitekran.online`. HTTPS (Certbot + Let's Encrypt).
+*   **Docker:** `profitekran-postgres-1`, `profitekran-api-1`, `profitekran-nginx-1`.
+*   **Часовой пояс:** На сервере установлен `TZ: "Europe/Moscow"` (в `docker-compose.prod.yml`). Без этого расписание сдвигалось на 3 часа.
+*   **CI/CD (GitHub Actions):** `.github/workflows/deploy.yml`.
+    *   `git reset --hard origin/main` (чтобы избежать конфликтов на сервере).
+    *   Перед сборкой удаляется старый образ API: `docker rmi profitekran-api:latest || true`.
+    *   Сборка: `docker compose ... build --no-cache api`.
+    *   Перед запуском удаляется старый Nginx: `stop nginx`, `rm -f nginx` (чтобы применились volume).
+    *   Запуск: `docker compose ... up -d --force-recreate`.
+    *   **Секреты:** Передаются через `envs` в SSH-скрипт (S3, JWT).
+
+## 💻 2. ТЕХНОЛОГИЧЕСКИЙ СТЕК
+*   **Монорепозиторий:** `content`.
+    *   `apps/tv-pwa` (React, Vite, Mantine, FSD, PWA, IndexedDB).
+    *   `apps/admin` (React, Vite, Mantine, React Query, FSD).
+    *   `services/api` (Fastify, TypeScript, Prisma 7, PostgreSQL).
+*   **Файлы конфигурации:**
+    *   `content/docker-compose.prod.yml` — сборка контейнеров.
+    *   `content/nginx.conf` — конфиг Nginx (раздает PWA и Админку, проксирует API).
+    *   `content/services/api/Dockerfile` — добавлен `tzdata` (для часового пояса).
+
+## 🗄️ 3. БАЗА ДАННЫХ (Prisma)
+Файл: **`content/services/api/prisma/schema.prisma`**.
+*   **`Tenant`:** `id`, `name`, `subscriptionEnd`, `isActive`, **`playlistVersion`** (Int, default: 1).
+*   **`User`:** `id`, `phone`, `role`, `otpCode`, `otpExpiresAt`, `tenantId`.
+*   **`Screen`:** `id`, `name`, `deviceId`, `isActive`, `tenantId`, `wallId` (связь), `wallRole` (Enum: `INFO`, `VIDEO_FULL` и т.д.).
+*   **`Content`:** `id`, `type` (BASE, ANCHOR, PROMO, OFFER, SERVICE), `url`, `durationSec`, `orientation`, `actionUrl`, `dayparts`, `tenantId`.
+*   **`VideoWall`:** `id`, `name`, `layoutType` (Enum: TWO_HORIZONTAL, TWO_VERTICAL, THREE_HORIZONTAL, THREE_VERTICAL), `tenantId`.
+*   **`VideoWallItem`:** `id`, `wallId`, `tenantId`, `type`, `url`, `durationSec`, `orientation`, `qrUrl`, `infoText`, `dayparts`.
+
+## 🏗️ 4. БЭКЕНД (API)
+Файлы в **`content/services/api/src/`**:
+*   **Роуты:**
+    *   **`infrastructure/http/auth.route.ts`:** Авторизация (SMS OTP), `/auth/me`, `/auth/logout`, `/tenant/name`, **`POST /tenant/increment-version`** (кнопка обновления).
+    *   **`infrastructure/http/playlist.route.ts`:** 
+        *   `GET /playlist?deviceId=...` — **Главная магия:** 
+            *   Одиночные экраны: генерирует плейлист + возвращает `playlistVersion`.
+            *   Стена: генерирует **расписание (schedule)** с таймкодами (с учетом Dayparts).
+        *   `POST /upload`, `POST /add-video`, `GET /videos`, `DELETE /videos/:id`, `POST /screens`, `GET /screens`, `DELETE /screens/:id`.
+    *   **`infrastructure/http/wall.route.ts`:** `POST /walls/verify-screen`, `POST /walls`, `POST /walls/:id/content`, `GET /walls`.
+*   **Middlewares:** `infrastructure/http/middlewares/authPreHandler.ts`.
+*   **Репозитории:** `infrastructure/repositories/PrismaContentRepository.ts`.
+*   **S3:** `infrastructure/s3/S3Service.ts`.
+
+## 🖥️ 5. АДМИНКА (Vite)
+Файлы в **`content/apps/admin/src/`**:
+*   **Роутинг:** `App.tsx`. Роуты: `/login`, `/` (AdminPage), `/wall` (список стен), `/wall/:id` (редактирование стены).
+*   **Страницы:** `screens/auth/ui/AuthPage.tsx`, `screens/admin/ui/AdminPage.tsx`, `screens/video-wall/ui/VideoWallPage.tsx`, `screens/video-wall/ui/VideoWallEditPage.tsx`.
+*   **Виджеты:** `VideoWallPreview`, `ScreenList`, `VideoList`.
+*   **Фичи:** `bind-screen`, `upload-video`, `BaseWallContent`, `PromoWallContent`.
+*   **API-клиент:** `shared/api/client.ts` (включая `forceUpdatePlaylist`).
+
+## 📺 6. ТЕЛЕВИЗОР (PWA)
+Файлы в **`content/apps/tv-pwa/src/`**:
+*   **`pages/home/HomePage.tsx`:**
+    *   Если `isWall && wallRole === 'INFO'` -> `<InfoScreen schedule={schedule} />`.
+    *   Если `isWall && schedule.length > 0` -> `<Player schedule={schedule} />`.
+    *   Иначе -> `<Player videos={videos} />`.
+*   **`pages/home/model/usePlaylist.ts`:** 
+    *   Сохраняет `schedule` или `videos`, а также `playlistVersion` (в `localStorage`).
+    *   При проверке версии (в `handleEnded`) сбрасывает Service Worker и перезагружает страницу.
+*   **`widgets/info-screen/ui/InfoScreen.tsx`:** Принимает `schedule`, показывает часы и QR-код по таймкоду.
+*   **`widgets/player/Player.tsx`:** Принимает `videos` или `schedule`. Есть заглушка «Ожидание эфира».
+*   **`widgets/player/lib/useVideoPlayer.ts`:** 
+    *   Для стены: принудительно перематывает видео по расписанию.
+    *   Для одиночного: в `handleEnded` проверяет `playlistVersion`. Если версия изменилась — сбрасывает Service Worker и перезагружает страницу.
+*   **`sw.ts` (Service Worker):** 
+    *   Кэширует видео (CacheFirst).
+    *   Для `/playlist` использует **Stale-While-Revalidate** (отдает кэш, но в фоне обновляет).
+    *   **`cacheDidUpdate`**: при обновлении кэша отправляет сообщение `PLAYLIST_UPDATED` на приставку.
+
+## ⚠️ 7. ВАЖНЫЕ НЮАНСЫ (ЧТОБЫ НЕ НАСТУПИТЬ НА ГРАБЛИ)
+1.  **Часовой пояс:** Сервер и приставка должны работать в MSK (через `TZ`).
+2.  **Место на диске:** Перед деплоем всегда проверяй `df -h`. Если места меньше 1 ГБ — сборка упадет.
+3.  **Prisma Client:** Если TypeScript ругается, что нет `PrismaClient`, выполни `npx prisma generate` в папке `services/api` на сервере.
+4.  **Кэш PWA:** После обновления кода на сервере, на телевизоре нужно один раз очистить Service Worker (Application -> Service Workers -> Unregister) и Storage (Clear site data). Дальше автообновление работает само.
+5.  **Сборка API:** Флаг `--no-cache` не всегда помогает. Иногда нужно удалить образ вручную (`docker rmi profitekran-api:latest`).
+
+## ⏭️ 8. СЛЕДУЮЩИЕ ШАГИ
+1.  **Офлайн-скачивание:** Приставка должна скачивать все видео из расписания в IndexedDB (без кнопки, в фоне).
+2.  **Мультитенантность (SaaS):** Каждый новый номер телефона создает нового тенанта.
+3.  **Биллинг:** Проверка `subscriptionEnd` перед показом.
+
+---
+*Копируй этот текст. Как будешь готова продолжить, просто напиши «Продолжаем с офлайн-скачивания» или «Продолжаем с контекста».*

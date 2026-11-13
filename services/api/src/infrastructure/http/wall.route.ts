@@ -146,6 +146,12 @@ export async function wallRoutes(app: FastifyInstance) {
         });
       }
 
+      // ДОБАВИЛИ: Обновляем версию плейлиста для тенанта
+      await prisma.tenant.update({
+        where: { id: tenantId },
+        data: { playlistVersion: { increment: 1 } },
+      });
+
       return { status: 'success' };
     } catch (error) {
       app.log.error(error);

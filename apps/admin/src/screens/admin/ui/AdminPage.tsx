@@ -90,6 +90,9 @@ export const AdminPage = () => {
           >
             Обновить контент на ТВ
           </Button>
+          <Text size="xs" c="dimmed" ta="center">
+            Рекомендуем обновлять контент в нерабочее время, чтобы не нагружать интернет.
+          </Text>
       </Stack>
     </Container>
   );

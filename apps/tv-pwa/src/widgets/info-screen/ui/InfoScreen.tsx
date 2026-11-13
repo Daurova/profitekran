@@ -1,18 +1,20 @@
 import { Box, Text, Stack, Title } from '@mantine/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import QRCode from 'react-qr-code';
 
 export const InfoScreen = ({ schedule }: { schedule: any[] }) => {
   const [time, setTime] = useState(new Date());
   const [currentQr, setCurrentQr] = useState('');
   const [currentText, setCurrentText] = useState('');
+  
+  // Храним ID текущего слота, чтобы проверять версию только при смене
+  const lastSlotIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const timer = setInterval(() => {
+    const timer = setInterval(async () => {
       const now = Date.now();
       setTime(new Date(now));
 
-      // Ищем текущий слот в расписании по UNIX-времени
       const currentSlot = schedule.find(
         s => now >= s.startTime && now < s.endTime
       );
@@ -20,6 +22,31 @@ export const InfoScreen = ({ schedule }: { schedule: any[] }) => {
       if (currentSlot) {
         setCurrentQr(currentSlot.qrUrl || '');
         setCurrentText(currentSlot.infoText || '');
+
+        // ПРОВЕРКА ВЕРСИИ: только если слот сменился (а не каждую секунду)
+        const slotId = String(currentSlot.startTime);
+        if (lastSlotIdRef.current !== slotId) {
+          lastSlotIdRef.current = slotId;
+
+          try {
+            const deviceId = localStorage.getItem('device_id');
+            if (deviceId) {
+              const res = await fetch(`/api/playlist?deviceId=${deviceId}`);
+              const data = await res.json();
+              
+              if (data.playlistVersion) {
+                const cachedVersion = Number(localStorage.getItem('playlist_version') || '1');
+                if (data.playlistVersion > cachedVersion) {
+                  console.log('InfoScreen: новая версия плейлиста! Перезагружаем...');
+                  localStorage.setItem('playlist_version', String(data.playlistVersion));
+                  window.location.reload();
+                }
+              }
+            }
+          } catch (e) {
+            // Игнорируем ошибки сети
+          }
+        }
       }
     }, 1000);
 

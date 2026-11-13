@@ -78,11 +78,14 @@ export async function playlistRoutes(app: FastifyInstance) {
           }
         }
 
+        const tenant = await prisma.tenant.findUnique({ where: { id: screen.tenantId } });
+
         if (screen.wallRole === 'INFO') {
           return {
             status: 'success',
             isWall: true,
             wallRole: 'INFO',
+            playlistVersion: tenant?.playlistVersion || 1, // <-- ДОБАВИЛИ
             schedule: schedule.map(s => ({
               qrUrl: s.qrUrl,
               infoText: s.infoText,
@@ -97,6 +100,7 @@ export async function playlistRoutes(app: FastifyInstance) {
           isWall: true,
           wallRole: screen.wallRole,
           wallLayout: screen.wall?.layoutType,
+          playlistVersion: tenant?.playlistVersion || 1, // <-- ДОБАВИЛИ
           schedule: schedule,
         };
       }
@@ -273,7 +277,8 @@ export async function playlistRoutes(app: FastifyInstance) {
       return reply.status(500).send({ error: 'Ошибка удаления экрана' });
     }
   });
-    // Принудительное обновление плейлиста
+
+  // 9. Принудительное обновление плейлиста
   app.post('/tenant/increment-version', { preHandler: authPreHandler }, async (request, reply) => {
     try {
       const tenantId = (request as any).user.tenantId;
