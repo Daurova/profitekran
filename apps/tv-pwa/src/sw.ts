@@ -30,11 +30,11 @@ registerRoute(
       new ExpirationPlugin({ maxEntries: 1, maxAgeSeconds: 7 * 24 * 60 * 60 }),
       {
         // Этот хук срабатывает, когда Workbox обновил кэш новыми данными
-        cacheDidUpdate: async ({ cacheName, newResponse }) => {
-          if (!newResponse) return;
+        cacheDidUpdate: async (args: { newResponse?: Response }) => {
+          if (!args.newResponse) return;
           
           try {
-            const data = await newResponse.json();
+            const data = await args.newResponse.json();
             if (data.playlistVersion) {
               // Отправляем сообщение всем открытым вкладкам (приставкам)
               const clients = await self.clients.matchAll();
@@ -49,7 +49,7 @@ registerRoute(
             console.warn('SW: Не удалось прочитать обновленный плейлист', e);
           }
         },
-      } as any, // Приводим к any, так как типы Workbox иногда строгие
+      },
     ],
   })
 );
